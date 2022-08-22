@@ -573,6 +573,16 @@
               <FileType>5</FileType>
               <FilePath>..\..\User\FreeRTOSConfig.h</FilePath>
             </File>
+            <File>
+              <FileName>bsp_usart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\usart\bsp_usart.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_usart.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\usart\bsp_usart.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -25,7 +25,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
-
+#include "FreeRTOS.h"					//FreeRTOS  
+#include "task.h" 
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
   */
@@ -136,9 +137,20 @@ void PendSV_Handler(void)
   * @param  None
   * @retval None
   */
+void xPortSysTickHandler(void);
+// 中断服务函数
 void SysTick_Handler(void)
-{
+{	
+    #if (INCLUDE_xTaskGetSchedulerState  == 1 )
+      if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
+      {
+    #endif  /* INCLUDE_xTaskGetSchedulerState */  
+        xPortSysTickHandler();
+    #if (INCLUDE_xTaskGetSchedulerState  == 1 )
+      }
+    #endif  /* INCLUDE_xTaskGetSchedulerState */
 }
+
 
 /******************************************************************************/
 /*                 STM32F10x Peripherals Interrupt Handlers                   */
