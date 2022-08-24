@@ -1,4 +1,4 @@
-/**
+﻿/**
   ******************************************************************************
   * @file    main.c
   * @author  fire
@@ -20,7 +20,7 @@
 #include "FreeRTOS.h"					//FreeRTOS使用		  
 #include "task.h" 
 #include "bsp_usart.h"
-
+#include "bsp_key.h" 
 
 /**************************** 任务句柄 ********************************/
 /* 
@@ -39,6 +39,8 @@ static TaskHandle_t AppTaskCreate_Handle = NULL;
 static TaskHandle_t LED_Task_Handle = NULL;
 
 static TaskHandle_t LED_Task_Handle2 = NULL;
+
+static TaskHandle_t KEY_Task_Handle = NULL;/* KEY任务句柄 */
 
 
 /********************************** 内核对象句柄 *********************************/
@@ -88,8 +90,10 @@ static TaskHandle_t LED_Task_Handle2 = NULL;
 static void AppTaskCreate(void);
 static void LED_Task(void* parameter);
 static void LED_Task2(void* parameter);
-
 static void BSP_Init(void);
+static void KEY_Task(void* pvParameters);/* KEY_Task任务实现 */
+
+
 /**
 	* 使用了静态分配内存，以下这两个函数是由用户实现，函数在task.c文件中有引用
 	*	当且仅当 configSUPPORT_STATIC_ALLOCATION 这个宏定义为 1 的时候才有效
@@ -170,7 +174,8 @@ static void BSP_Init(void)
 	/* 串口初始化	*/
 	USART_Config();
 
-	LED1_ON;
+	Key_GPIO_Config();
+	//LED1_ON;
 	//printf(" yuahng usart init ok!\n");
 }
 
@@ -218,6 +223,16 @@ static void AppTaskCreate(void)
                         (TaskHandle_t*  )&LED_Task_Handle2);/* 任务控制块指针 */
   if(pdPASS == xReturn)
     printf("创建LED_Task2任务成功!\r\n");
+  /* 创建KEY_Task任务 */
+  xReturn = xTaskCreate((TaskFunction_t )KEY_Task,  /* 任务入口函数 */
+                        (const char*    )"KEY_Task",/* 任务名字 */
+                        (uint16_t       )512,  /* 任务栈大小 */
+                        (void*          )NULL,/* 任务入口函数参数 */
+                        (UBaseType_t    )3, /* 任务的优先级 */
+                        (TaskHandle_t*  )&KEY_Task_Handle);/* 任务控制块指针 */ 
+  if(pdPASS == xReturn)
+    printf("创建KEY_Task任务成功!\r\n");
+
 
   vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
   
@@ -237,27 +252,57 @@ static void LED_Task(void* parameter)
         LED1_ON;
         vTaskDelay(500);   /* 延时500个tick */
         printf("LED_Task Running,LED1_ON\r\n");
+		printf("time : %d\r\n", xTaskGetTickCount());
         
         LED1_OFF;     
         vTaskDelay(500);   /* 延时500个tick */		 		
         printf("LED_Task Running,LED1_OFF\r\n");
+		printf("time : %d\r\n", xTaskGetTickCount());
     }
 }
-
 
 static void LED_Task2(void* parameter)
 {	
+	static TickType_t pxPreviousWakeTime;
+	static TickType_t const xTimeIncrement = pdMS_TO_TICKS(1000);
+	pxPreviousWakeTime = xTaskGetTickCount();
     while (1)
     {
         LED2_ON;
-        vTaskDelay(1000);   /* 延时500个tick */
+        // vTaskDelay(1000);   /* 延时500个tick */
+		vTaskDelayUntil(&pxPreviousWakeTime, xTimeIncrement);
         printf("LED_Task2 Running,LED2_ON\r\n");
+		printf("time : %d\r\n", xTaskGetTickCount());
         
         LED2_OFF;     
-        vTaskDelay(1000);   /* 延时500个tick */		 		
+        //vTaskDelay(1000);   /* 延时500个tick */
+		vTaskDelayUntil(&pxPreviousWakeTime, xTimeIncrement);
         printf("LED_Task2 Running,LED2_OFF\r\n");
+		printf("time : %d\r\n", xTaskGetTickCount());
     }
 }
+
+
+static void KEY_Task(void* parameter)
+{	
+  while (1)
+  {
+    if( Key_Scan(KEY1_GPIO_PORT,KEY1_GPIO_PIN) == KEY_ON )
+    {/* K1 被按下 */
+      printf("挂起LED任务！\r\n");
+      vTaskSuspend(LED_Task_Handle2);/* 挂起LED任务 */
+      printf("挂起LED任务成功！\r\n");
+    } 
+    if( Key_Scan(KEY2_GPIO_PORT,KEY2_GPIO_PIN) == KEY_ON )
+    {/* K2 被按下 */
+      printf("恢复LED任务！\r\n");
+      vTaskResume(LED_Task_Handle2);/* 恢复LED任务！ */
+      printf("恢复LED任务成功！\r\n");
+    }
+    vTaskDelay(20);/* 延时20个tick */
+  }
+}
+
 
 // 静态创建你任务时需要	
 

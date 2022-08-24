@@ -46,3 +46,4 @@ source insight与Keil 以及GIT的关于 GB1312 和 UTF-8的不兼容问题没有解决
 再进行GIT的上库操作
 否则会在GIT的提交记录上看到的中文都是乱码
 
+余航是帅哥
