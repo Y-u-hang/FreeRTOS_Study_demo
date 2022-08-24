@@ -30,7 +30,7 @@
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
   */
-
+浣欒埅
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -138,7 +138,7 @@ void PendSV_Handler(void)
   * @retval None
   */
 void xPortSysTickHandler(void);
-// 中断服务函数
+// 涓柇鏈嶅姟鍑芥暟
 void SysTick_Handler(void)
 {	
     #if (INCLUDE_xTaskGetSchedulerState  == 1 )

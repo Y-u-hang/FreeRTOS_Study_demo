@@ -4,84 +4,84 @@
   * @author  fire
   * @version V1.0
   * @date    2013-xx-xx
-  * @brief   ²âÊÔled
+  * @brief   æµ‹è¯•led
   ******************************************************************************
   * @attention
   *
-  * ÊµÑéÆ½Ì¨:Ò°»ğ F103-°ÔµÀ STM32 ¿ª·¢°å 
-  * ÂÛÌ³    :http://www.firebbs.cn
-  * ÌÔ±¦    :https://fire-stm32.taobao.com
+  * å®éªŒå¹³å°:é‡ç« F103-éœ¸é“ STM32 å¼€å‘æ¿ 
+  * è®ºå›    :http://www.firebbs.cn
+  * æ·˜å®    :https://fire-stm32.taobao.com
   *
   ******************************************************************************
   */ 
 	
 #include "stm32f10x.h"
 #include "bsp_led.h"
-#include "FreeRTOS.h"					//FreeRTOSÊ¹ÓÃ		  
+#include "FreeRTOS.h"					//FreeRTOSä½¿ç”¨		  
 #include "task.h" 
 #include "bsp_usart.h"
 
 
-/**************************** ÈÎÎñ¾ä±ú ********************************/
+/**************************** ä»»åŠ¡å¥æŸ„ ********************************/
 /* 
- * ÈÎÎñ¾ä±úÊÇÒ»¸öÖ¸Õë£¬ÓÃÓÚÖ¸ÏòÒ»¸öÈÎÎñ£¬µ±ÈÎÎñ´´½¨ºÃÖ®ºó£¬Ëü¾Í¾ßÓĞÁËÒ»¸öÈÎÎñ¾ä±ú
- * ÒÔºóÎÒÃÇÒªÏë²Ù×÷Õâ¸öÈÎÎñ¶¼ĞèÒªÍ¨¹ıÕâ¸öÈÎÎñ¾ä±ú£¬Èç¹ûÊÇ×ÔÉíµÄÈÎÎñ²Ù×÷×Ô¼º£¬ÄÇÃ´
- * Õâ¸ö¾ä±ú¿ÉÒÔÎªNULL¡£
+ * ä»»åŠ¡å¥æŸ„æ˜¯ä¸€ä¸ªæŒ‡é’ˆï¼Œç”¨äºæŒ‡å‘ä¸€ä¸ªä»»åŠ¡ï¼Œå½“ä»»åŠ¡åˆ›å»ºå¥½ä¹‹åï¼Œå®ƒå°±å…·æœ‰äº†ä¸€ä¸ªä»»åŠ¡å¥æŸ„
+ * ä»¥åæˆ‘ä»¬è¦æƒ³æ“ä½œè¿™ä¸ªä»»åŠ¡éƒ½éœ€è¦é€šè¿‡è¿™ä¸ªä»»åŠ¡å¥æŸ„ï¼Œå¦‚æœæ˜¯è‡ªèº«çš„ä»»åŠ¡æ“ä½œè‡ªå·±ï¼Œé‚£ä¹ˆ
+ * è¿™ä¸ªå¥æŸ„å¯ä»¥ä¸ºNULLã€‚
  */
-// /* ´´½¨ÈÎÎñ¾ä±ú */
+// /* åˆ›å»ºä»»åŠ¡å¥æŸ„ */
 //static TaskHandle_t AppTaskCreate_Handle;
-///* LEDÈÎÎñ¾ä±ú */
+///* LEDä»»åŠ¡å¥æŸ„ */
 //static TaskHandle_t LED_Task_Handle;		
 
- /* ´´½¨ÈÎÎñ¾ä±ú */
+ /* åˆ›å»ºä»»åŠ¡å¥æŸ„ */
 static TaskHandle_t AppTaskCreate_Handle = NULL;
-/* LEDÈÎÎñ¾ä±ú */
+/* LEDä»»åŠ¡å¥æŸ„ */
 static TaskHandle_t LED_Task_Handle = NULL;
 
 static TaskHandle_t LED_Task_Handle2 = NULL;
 
 
-/********************************** ÄÚºË¶ÔÏó¾ä±ú *********************************/
+/********************************** å†…æ ¸å¯¹è±¡å¥æŸ„ *********************************/
 /*
- * ĞÅºÅÁ¿£¬ÏûÏ¢¶ÓÁĞ£¬ÊÂ¼ş±êÖ¾×é£¬Èí¼ş¶¨Ê±Æ÷ÕâĞ©¶¼ÊôÓÚÄÚºËµÄ¶ÔÏó£¬ÒªÏëÊ¹ÓÃÕâĞ©ÄÚºË
- * ¶ÔÏó£¬±ØĞëÏÈ´´½¨£¬´´½¨³É¹¦Ö®ºó»á·µ»ØÒ»¸öÏàÓ¦µÄ¾ä±ú¡£Êµ¼ÊÉÏ¾ÍÊÇÒ»¸öÖ¸Õë£¬ºóĞøÎÒ
- * ÃÇ¾Í¿ÉÒÔÍ¨¹ıÕâ¸ö¾ä±ú²Ù×÷ÕâĞ©ÄÚºË¶ÔÏó¡£
+ * ä¿¡å·é‡ï¼Œæ¶ˆæ¯é˜Ÿåˆ—ï¼Œäº‹ä»¶æ ‡å¿—ç»„ï¼Œè½¯ä»¶å®šæ—¶å™¨è¿™äº›éƒ½å±äºå†…æ ¸çš„å¯¹è±¡ï¼Œè¦æƒ³ä½¿ç”¨è¿™äº›å†…æ ¸
+ * å¯¹è±¡ï¼Œå¿…é¡»å…ˆåˆ›å»ºï¼Œåˆ›å»ºæˆåŠŸä¹‹åä¼šè¿”å›ä¸€ä¸ªç›¸åº”çš„å¥æŸ„ã€‚å®é™…ä¸Šå°±æ˜¯ä¸€ä¸ªæŒ‡é’ˆï¼Œåç»­æˆ‘
+ * ä»¬å°±å¯ä»¥é€šè¿‡è¿™ä¸ªå¥æŸ„æ“ä½œè¿™äº›å†…æ ¸å¯¹è±¡ã€‚
  *
- * ÄÚºË¶ÔÏóËµ°×ÁË¾ÍÊÇÒ»ÖÖÈ«¾ÖµÄÊı¾İ½á¹¹£¬Í¨¹ıÕâĞ©Êı¾İ½á¹¹ÎÒÃÇ¿ÉÒÔÊµÏÖÈÎÎñ¼äµÄÍ¨ĞÅ£¬
- * ÈÎÎñ¼äµÄÊÂ¼şÍ¬²½µÈ¸÷ÖÖ¹¦ÄÜ¡£ÖÁÓÚÕâĞ©¹¦ÄÜµÄÊµÏÖÎÒÃÇÊÇÍ¨¹ıµ÷ÓÃÕâĞ©ÄÚºË¶ÔÏóµÄº¯Êı
- * À´Íê³ÉµÄ
+ * å†…æ ¸å¯¹è±¡è¯´ç™½äº†å°±æ˜¯ä¸€ç§å…¨å±€çš„æ•°æ®ç»“æ„ï¼Œé€šè¿‡è¿™äº›æ•°æ®ç»“æ„æˆ‘ä»¬å¯ä»¥å®ç°ä»»åŠ¡é—´çš„é€šä¿¡ï¼Œ
+ * ä»»åŠ¡é—´çš„äº‹ä»¶åŒæ­¥ç­‰å„ç§åŠŸèƒ½ã€‚è‡³äºè¿™äº›åŠŸèƒ½çš„å®ç°æˆ‘ä»¬æ˜¯é€šè¿‡è°ƒç”¨è¿™äº›å†…æ ¸å¯¹è±¡çš„å‡½æ•°
+ * æ¥å®Œæˆçš„
  * 
  */
  
-/******************************* È«¾Ö±äÁ¿ÉùÃ÷ ************************************/
+/******************************* å…¨å±€å˜é‡å£°æ˜ ************************************/
 /*
- * µ±ÎÒÃÇÔÚĞ´Ó¦ÓÃ³ÌĞòµÄÊ±ºò£¬¿ÉÄÜĞèÒªÓÃµ½Ò»Ğ©È«¾Ö±äÁ¿¡£
+ * å½“æˆ‘ä»¬åœ¨å†™åº”ç”¨ç¨‹åºçš„æ—¶å€™ï¼Œå¯èƒ½éœ€è¦ç”¨åˆ°ä¸€äº›å…¨å±€å˜é‡ã€‚
  */
-//	¾²Ì¬ÈÎÎñ´´½¨
-///* AppTaskCreateÈÎÎñÈÎÎñ¶ÑÕ» */
+//	é™æ€ä»»åŠ¡åˆ›å»º
+///* AppTaskCreateä»»åŠ¡ä»»åŠ¡å †æ ˆ */
 //static StackType_t AppTaskCreate_Stack[128];
-///* LEDÈÎÎñ¶ÑÕ» */
+///* LEDä»»åŠ¡å †æ ˆ */
 //static StackType_t LED_Task_Stack[128];
 //
-///* AppTaskCreate ÈÎÎñ¿ØÖÆ¿é */
+///* AppTaskCreate ä»»åŠ¡æ§åˆ¶å— */
 //static StaticTask_t AppTaskCreate_TCB;
-///* LED ÈÎÎñ¿ØÖÆ¿é */
+///* LED ä»»åŠ¡æ§åˆ¶å— */
 //static StaticTask_t LED_Task_TCB;
 //
 //
-///* ¿ÕÏĞÈÎÎñÈÎÎñ¶ÑÕ» */
+///* ç©ºé—²ä»»åŠ¡ä»»åŠ¡å †æ ˆ */
 //static StackType_t Idle_Task_Stack[configMINIMAL_STACK_SIZE];
-///* ¶¨Ê±Æ÷ÈÎÎñ¶ÑÕ» */
+///* å®šæ—¶å™¨ä»»åŠ¡å †æ ˆ */
 //static StackType_t Timer_Task_Stack[configTIMER_TASK_STACK_DEPTH];
 //
-///* ¿ÕÏĞÈÎÎñ¿ØÖÆ¿é */
+///* ç©ºé—²ä»»åŠ¡æ§åˆ¶å— */
 //static StaticTask_t Idle_Task_TCB;	
-///* ¶¨Ê±Æ÷ÈÎÎñ¿ØÖÆ¿é */
+///* å®šæ—¶å™¨ä»»åŠ¡æ§åˆ¶å— */
 //static StaticTask_t Timer_Task_TCB;
 
 /*
 *************************************************************************
-*                             º¯ÊıÉùÃ÷
+*                             å‡½æ•°å£°æ˜
 *************************************************************************
 */
 
@@ -91,8 +91,8 @@ static void LED_Task2(void* parameter);
 
 static void BSP_Init(void);
 /**
-	* Ê¹ÓÃÁË¾²Ì¬·ÖÅäÄÚ´æ£¬ÒÔÏÂÕâÁ½¸öº¯ÊıÊÇÓÉÓÃ»§ÊµÏÖ£¬º¯ÊıÔÚtask.cÎÄ¼şÖĞÓĞÒıÓÃ
-	*	µ±ÇÒ½öµ± configSUPPORT_STATIC_ALLOCATION Õâ¸öºê¶¨ÒåÎª 1 µÄÊ±ºò²ÅÓĞĞ§
+	* ä½¿ç”¨äº†é™æ€åˆ†é…å†…å­˜ï¼Œä»¥ä¸‹è¿™ä¸¤ä¸ªå‡½æ•°æ˜¯ç”±ç”¨æˆ·å®ç°ï¼Œå‡½æ•°åœ¨task.cæ–‡ä»¶ä¸­æœ‰å¼•ç”¨
+	*	å½“ä¸”ä»…å½“ configSUPPORT_STATIC_ALLOCATION è¿™ä¸ªå®å®šä¹‰ä¸º 1 çš„æ—¶å€™æ‰æœ‰æ•ˆ
 	*/
 void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, 
 																		StackType_t **ppxTimerTaskStackBuffer, 
@@ -104,69 +104,69 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
 
 int main(void)
 {	
-  BaseType_t xReturn = pdPASS;/* ¶¨ÒåÒ»¸ö´´½¨ĞÅÏ¢·µ»ØÖµ£¬Ä¬ÈÏÎªpdPASS */
+  BaseType_t xReturn = pdPASS;/* å®šä¹‰ä¸€ä¸ªåˆ›å»ºä¿¡æ¯è¿”å›å€¼ï¼Œé»˜è®¤ä¸ºpdPASS */
 
-  /* ¿ª·¢°åÓ²¼ş³õÊ¼»¯ */
+  /* å¼€å‘æ¿ç¡¬ä»¶åˆå§‹åŒ– */
   BSP_Init();
-   /* ´´½¨ AppTaskCreate ÈÎÎñ */
-// 	¾²Ì¬´´½¨ÈÎÎñ
-//	AppTaskCreate_Handle = xTaskCreateStatic((TaskFunction_t	)AppTaskCreate,		//ÈÎÎñº¯Êı
-//															(const char* 	)"AppTaskCreate",		//ÈÎÎñÃû³Æ
-//															(uint32_t 		)128,	//ÈÎÎñ¶ÑÕ»´óĞ¡
-//															(void* 		  	)NULL,				//´«µİ¸øÈÎÎñº¯ÊıµÄ²ÎÊı
-//															(UBaseType_t 	)3, 	//ÈÎÎñÓÅÏÈ¼¶
-//															(StackType_t*   )AppTaskCreate_Stack,	//ÈÎÎñ¶ÑÕ»
-//															(StaticTask_t*  )&AppTaskCreate_TCB);	//ÈÎÎñ¿ØÖÆ¿é   
+   /* åˆ›å»º AppTaskCreate ä»»åŠ¡ */
+// 	é™æ€åˆ›å»ºä»»åŠ¡
+//	AppTaskCreate_Handle = xTaskCreateStatic((TaskFunction_t	)AppTaskCreate,		//ä»»åŠ¡å‡½æ•°
+//															(const char* 	)"AppTaskCreate",		//ä»»åŠ¡åç§°
+//															(uint32_t 		)128,	//ä»»åŠ¡å †æ ˆå¤§å°
+//															(void* 		  	)NULL,				//ä¼ é€’ç»™ä»»åŠ¡å‡½æ•°çš„å‚æ•°
+//															(UBaseType_t 	)3, 	//ä»»åŠ¡ä¼˜å…ˆçº§
+//															(StackType_t*   )AppTaskCreate_Stack,	//ä»»åŠ¡å †æ ˆ
+//															(StaticTask_t*  )&AppTaskCreate_TCB);	//ä»»åŠ¡æ§åˆ¶å—   
 //
 //															
-//	if(NULL != AppTaskCreate_Handle)/* ´´½¨³É¹¦ */
-//    vTaskStartScheduler();   /* Æô¶¯ÈÎÎñ£¬¿ªÆôµ÷¶È */
+//	if(NULL != AppTaskCreate_Handle)/* åˆ›å»ºæˆåŠŸ */
+//    vTaskStartScheduler();   /* å¯åŠ¨ä»»åŠ¡ï¼Œå¼€å¯è°ƒåº¦ */
 	
 
 	
-	/* ¿ª·¢°åÓ²¼ş³õÊ¼»¯ */
+	/* å¼€å‘æ¿ç¡¬ä»¶åˆå§‹åŒ– */
 	BSP_Init();
-	printf("ÕâÊÇÒ»¸ö[Ò°»ğ]-STM32È«ÏµÁĞ¿ª·¢°å-FreeRTOS-¶¯Ì¬´´½¨ÈÎÎñ!\r\n");
-	 /* ´´½¨AppTaskCreateÈÎÎñ */
-	xReturn = xTaskCreate((TaskFunction_t )AppTaskCreate,  /* ÈÎÎñÈë¿Úº¯Êı */
-						  (const char*	  )"AppTaskCreate",/* ÈÎÎñÃû×Ö */
-						  (uint16_t 	  )512,  /* ÈÎÎñÕ»´óĞ¡ */
-						  (void*		  )NULL,/* ÈÎÎñÈë¿Úº¯Êı²ÎÊı */
-						  (UBaseType_t	  )1, /* ÈÎÎñµÄÓÅÏÈ¼¶ */
-						  (TaskHandle_t*  )&AppTaskCreate_Handle);/* ÈÎÎñ¿ØÖÆ¿éÖ¸Õë */ 
+	printf("è¿™æ˜¯ä¸€ä¸ª[é‡ç«]-STM32å…¨ç³»åˆ—å¼€å‘æ¿-FreeRTOS-åŠ¨æ€åˆ›å»ºä»»åŠ¡!\r\n");
+	 /* åˆ›å»ºAppTaskCreateä»»åŠ¡ */
+	xReturn = xTaskCreate((TaskFunction_t )AppTaskCreate,  /* ä»»åŠ¡å…¥å£å‡½æ•° */
+						  (const char*	  )"AppTaskCreate",/* ä»»åŠ¡åå­— */
+						  (uint16_t 	  )512,  /* ä»»åŠ¡æ ˆå¤§å° */
+						  (void*		  )NULL,/* ä»»åŠ¡å…¥å£å‡½æ•°å‚æ•° */
+						  (UBaseType_t	  )1, /* ä»»åŠ¡çš„ä¼˜å…ˆçº§ */
+						  (TaskHandle_t*  )&AppTaskCreate_Handle);/* ä»»åŠ¡æ§åˆ¶å—æŒ‡é’ˆ */ 
 
-	/* Æô¶¯ÈÎÎñµ÷¶È */		   
-	// https://blog.csdn.net/zhoutaopower/article/details/107034995 †™„ÓÁ÷³Ì¿ÉÒÔ…¢ÕÕÔ“æœ½Ó
+	/* å¯åŠ¨ä»»åŠ¡è°ƒåº¦ */		   
+	// https://blog.csdn.net/zhoutaopower/article/details/107034995 å•“å‹•æµç¨‹å¯ä»¥åƒç…§è©²éˆæ¥
 	if(pdPASS == xReturn)
-	  vTaskStartScheduler();   /* Æô¶¯ÈÎÎñ£¬¿ªÆôµ÷¶È */
+	  vTaskStartScheduler();   /* å¯åŠ¨ä»»åŠ¡ï¼Œå¼€å¯è°ƒåº¦ */
 	else
 	  return -1;  
 	
-	while(1);   /* Õı³£²»»áÖ´ĞĞµ½ÕâÀï */    
+	while(1);   /* æ­£å¸¸ä¸ä¼šæ‰§è¡Œåˆ°è¿™é‡Œ */    
 }
 
 
 /*********************************************END OF FILE**********************/
 
 /***********************************************************************
-  * @ º¯ÊıÃû  £º BSP_Init
-  * @ ¹¦ÄÜËµÃ÷£º °å¼¶ÍâÉè³õÊ¼»¯£¬ËùÓĞ°å×ÓÉÏµÄ³õÊ¼»¯¾ù¿É·ÅÔÚÕâ¸öº¯ÊıÀïÃæ
-  * @ ²ÎÊı    £º   
-  * @ ·µ»ØÖµ  £º ÎŞ
+  * @ å‡½æ•°å  ï¼š BSP_Init
+  * @ åŠŸèƒ½è¯´æ˜ï¼š æ¿çº§å¤–è®¾åˆå§‹åŒ–ï¼Œæ‰€æœ‰æ¿å­ä¸Šçš„åˆå§‹åŒ–å‡å¯æ”¾åœ¨è¿™ä¸ªå‡½æ•°é‡Œé¢
+  * @ å‚æ•°    ï¼š   
+  * @ è¿”å›å€¼  ï¼š æ— 
   *********************************************************************/
 static void BSP_Init(void)
 {
 	/*
-	 * STM32ÖĞ¶ÏÓÅÏÈ¼¶·Ö×éÎª4£¬¼´4bit¶¼ÓÃÀ´±íÊ¾ÇÀÕ¼ÓÅÏÈ¼¶£¬·¶Î§Îª£º0~15
-	 * ÓÅÏÈ¼¶·Ö×éÖ»ĞèÒª·Ö×éÒ»´Î¼´¿É£¬ÒÔºóÈç¹ûÓĞÆäËûµÄÈÎÎñĞèÒªÓÃµ½ÖĞ¶Ï£¬
-	 * ¶¼Í³Ò»ÓÃÕâ¸öÓÅÏÈ¼¶·Ö×é£¬Ç§Íò²»ÒªÔÙ·Ö×é£¬ÇĞ¼É¡£
+	 * STM32ä¸­æ–­ä¼˜å…ˆçº§åˆ†ç»„ä¸º4ï¼Œå³4bitéƒ½ç”¨æ¥è¡¨ç¤ºæŠ¢å ä¼˜å…ˆçº§ï¼ŒèŒƒå›´ä¸ºï¼š0~15
+	 * ä¼˜å…ˆçº§åˆ†ç»„åªéœ€è¦åˆ†ç»„ä¸€æ¬¡å³å¯ï¼Œä»¥åå¦‚æœæœ‰å…¶ä»–çš„ä»»åŠ¡éœ€è¦ç”¨åˆ°ä¸­æ–­ï¼Œ
+	 * éƒ½ç»Ÿä¸€ç”¨è¿™ä¸ªä¼˜å…ˆçº§åˆ†ç»„ï¼Œåƒä¸‡ä¸è¦å†åˆ†ç»„ï¼Œåˆ‡å¿Œã€‚
 	 */
 	NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );
 	
-	/* LED ³õÊ¼»¯ */
+	/* LED åˆå§‹åŒ– */
 	LED_GPIO_Config();
 
-	/* ´®¿Ú³õÊ¼»¯	*/
+	/* ä¸²å£åˆå§‹åŒ–	*/
 	USART_Config();
 
 	LED1_ON;
@@ -174,71 +174,71 @@ static void BSP_Init(void)
 }
 
 /***********************************************************************
-  * @ º¯ÊıÃû  £º AppTaskCreate
-  * @ ¹¦ÄÜËµÃ÷£º ÎªÁË·½±ã¹ÜÀí£¬ËùÓĞµÄÈÎÎñ´´½¨º¯Êı¶¼·ÅÔÚÕâ¸öº¯ÊıÀïÃæ
-  * @ ²ÎÊı    £º ÎŞ  
-  * @ ·µ»ØÖµ  £º ÎŞ
+  * @ å‡½æ•°å  ï¼š AppTaskCreate
+  * @ åŠŸèƒ½è¯´æ˜ï¼š ä¸ºäº†æ–¹ä¾¿ç®¡ç†ï¼Œæ‰€æœ‰çš„ä»»åŠ¡åˆ›å»ºå‡½æ•°éƒ½æ”¾åœ¨è¿™ä¸ªå‡½æ•°é‡Œé¢
+  * @ å‚æ•°    ï¼š æ—   
+  * @ è¿”å›å€¼  ï¼š æ— 
   **********************************************************************/
 static void AppTaskCreate(void)
 {
-  BaseType_t xReturn = pdPASS;/* ¶¨ÒåÒ»¸ö´´½¨ĞÅÏ¢·µ»ØÖµ£¬Ä¬ÈÏÎªpdPASS */
+  BaseType_t xReturn = pdPASS;/* å®šä¹‰ä¸€ä¸ªåˆ›å»ºä¿¡æ¯è¿”å›å€¼ï¼Œé»˜è®¤ä¸ºpdPASS */
 
-  taskENTER_CRITICAL();           //½øÈëÁÙ½çÇø
+  taskENTER_CRITICAL();           //è¿›å…¥ä¸´ç•ŒåŒº
 
-  /* ´´½¨LED_TaskÈÎÎñ */
-//  ¾²Ì¬´´½¨ÈÎÎñ
-//	LED_Task_Handle = xTaskCreateStatic((TaskFunction_t	)LED_Task,		//ÈÎÎñº¯Êı
-//															(const char* 	)"LED_Task",		//ÈÎÎñÃû³Æ
-//															(uint32_t 		)128,					//ÈÎÎñ¶ÑÕ»´óĞ¡
-//															(void* 		  	)NULL,				//´«µİ¸øÈÎÎñº¯ÊıµÄ²ÎÊı
-//															(UBaseType_t 	)4, 				//ÈÎÎñÓÅÏÈ¼¶
-//															(StackType_t*   )LED_Task_Stack,	//ÈÎÎñ¶ÑÕ»
-//															(StaticTask_t*  )&LED_Task_TCB);	//ÈÎÎñ¿ØÖÆ¿é   
+  /* åˆ›å»ºLED_Taskä»»åŠ¡ */
+//  é™æ€åˆ›å»ºä»»åŠ¡
+//	LED_Task_Handle = xTaskCreateStatic((TaskFunction_t	)LED_Task,		//ä»»åŠ¡å‡½æ•°
+//															(const char* 	)"LED_Task",		//ä»»åŠ¡åç§°
+//															(uint32_t 		)128,					//ä»»åŠ¡å †æ ˆå¤§å°
+//															(void* 		  	)NULL,				//ä¼ é€’ç»™ä»»åŠ¡å‡½æ•°çš„å‚æ•°
+//															(UBaseType_t 	)4, 				//ä»»åŠ¡ä¼˜å…ˆçº§
+//															(StackType_t*   )LED_Task_Stack,	//ä»»åŠ¡å †æ ˆ
+//															(StaticTask_t*  )&LED_Task_TCB);	//ä»»åŠ¡æ§åˆ¶å—   
 //	
-//	if(NULL != LED_Task_Handle)/* ´´½¨³É¹¦ */
-//		printf("LED_TaskÈÎÎñ´´½¨³É¹¦!\n");
+//	if(NULL != LED_Task_Handle)/* åˆ›å»ºæˆåŠŸ */
+//		printf("LED_Taskä»»åŠ¡åˆ›å»ºæˆåŠŸ!\n");
 //	else
-//		printf("LED_TaskÈÎÎñ´´½¨Ê§°Ü!\n");
+//		printf("LED_Taskä»»åŠ¡åˆ›å»ºå¤±è´¥!\n");
 
-  xReturn = xTaskCreate((TaskFunction_t )LED_Task, /* ÈÎÎñÈë¿Úº¯Êı */
-                        (const char*    )"LED_Task",/* ÈÎÎñÃû×Ö */
-                        (uint16_t       )512,   /* ÈÎÎñÕ»´óĞ¡ */
-                        (void*          )NULL,	/* ÈÎÎñÈë¿Úº¯Êı²ÎÊı */
-                        (UBaseType_t    )2,	    /* ÈÎÎñµÄÓÅÏÈ¼¶ */
-                        (TaskHandle_t*  )&LED_Task_Handle);/* ÈÎÎñ¿ØÖÆ¿éÖ¸Õë */
+  xReturn = xTaskCreate((TaskFunction_t )LED_Task, /* ä»»åŠ¡å…¥å£å‡½æ•° */
+                        (const char*    )"LED_Task",/* ä»»åŠ¡åå­— */
+                        (uint16_t       )512,   /* ä»»åŠ¡æ ˆå¤§å° */
+                        (void*          )NULL,	/* ä»»åŠ¡å…¥å£å‡½æ•°å‚æ•° */
+                        (UBaseType_t    )2,	    /* ä»»åŠ¡çš„ä¼˜å…ˆçº§ */
+                        (TaskHandle_t*  )&LED_Task_Handle);/* ä»»åŠ¡æ§åˆ¶å—æŒ‡é’ˆ */
   if(pdPASS == xReturn)
-    printf("´´½¨LED_TaskÈÎÎñ³É¹¦!\r\n");
+    printf("åˆ›å»ºLED_Taskä»»åŠ¡æˆåŠŸ!\r\n");
 
-  xReturn = xTaskCreate((TaskFunction_t )LED_Task2, /* ÈÎÎñÈë¿Úº¯Êı */
-                        (const char*    )"LED_Task2",/* ÈÎÎñÃû×Ö */
-                        (uint16_t       )512,   /* ÈÎÎñÕ»´óĞ¡ */
-                        (void*          )NULL,	/* ÈÎÎñÈë¿Úº¯Êı²ÎÊı */
-                        (UBaseType_t    )2,	    /* ÈÎÎñµÄÓÅÏÈ¼¶ */
-                        (TaskHandle_t*  )&LED_Task_Handle2);/* ÈÎÎñ¿ØÖÆ¿éÖ¸Õë */
+  xReturn = xTaskCreate((TaskFunction_t )LED_Task2, /* ä»»åŠ¡å…¥å£å‡½æ•° */
+                        (const char*    )"LED_Task2",/* ä»»åŠ¡åå­— */
+                        (uint16_t       )512,   /* ä»»åŠ¡æ ˆå¤§å° */
+                        (void*          )NULL,	/* ä»»åŠ¡å…¥å£å‡½æ•°å‚æ•° */
+                        (UBaseType_t    )2,	    /* ä»»åŠ¡çš„ä¼˜å…ˆçº§ */
+                        (TaskHandle_t*  )&LED_Task_Handle2);/* ä»»åŠ¡æ§åˆ¶å—æŒ‡é’ˆ */
   if(pdPASS == xReturn)
-    printf("´´½¨LED_Task2ÈÎÎñ³É¹¦!\r\n");
+    printf("åˆ›å»ºLED_Task2ä»»åŠ¡æˆåŠŸ!\r\n");
 
-  vTaskDelete(AppTaskCreate_Handle); //É¾³ıAppTaskCreateÈÎÎñ
+  vTaskDelete(AppTaskCreate_Handle); //åˆ é™¤AppTaskCreateä»»åŠ¡
   
-  taskEXIT_CRITICAL();            //ÍË³öÁÙ½çÇø
+  taskEXIT_CRITICAL();            //é€€å‡ºä¸´ç•ŒåŒº
 }
 
 /**********************************************************************
-  * @ º¯ÊıÃû  £º LED_Task
-  * @ ¹¦ÄÜËµÃ÷£º LED_TaskÈÎÎñÖ÷Ìå
-  * @ ²ÎÊı    £º   
-  * @ ·µ»ØÖµ  £º ÎŞ
+  * @ å‡½æ•°å  ï¼š LED_Task
+  * @ åŠŸèƒ½è¯´æ˜ï¼š LED_Taskä»»åŠ¡ä¸»ä½“
+  * @ å‚æ•°    ï¼š   
+  * @ è¿”å›å€¼  ï¼š æ— 
   ********************************************************************/
 static void LED_Task(void* parameter)
 {	
     while (1)
     {
         LED1_ON;
-        vTaskDelay(500);   /* ÑÓÊ±500¸ötick */
+        vTaskDelay(500);   /* å»¶æ—¶500ä¸ªtick */
         printf("LED_Task Running,LED1_ON\r\n");
         
         LED1_OFF;     
-        vTaskDelay(500);   /* ÑÓÊ±500¸ötick */		 		
+        vTaskDelay(500);   /* å»¶æ—¶500ä¸ªtick */		 		
         printf("LED_Task Running,LED1_OFF\r\n");
     }
 }
@@ -249,23 +249,23 @@ static void LED_Task2(void* parameter)
     while (1)
     {
         LED2_ON;
-        vTaskDelay(1000);   /* ÑÓÊ±500¸ötick */
+        vTaskDelay(1000);   /* å»¶æ—¶500ä¸ªtick */
         printf("LED_Task2 Running,LED2_ON\r\n");
         
         LED2_OFF;     
-        vTaskDelay(1000);   /* ÑÓÊ±500¸ötick */		 		
+        vTaskDelay(1000);   /* å»¶æ—¶500ä¸ªtick */		 		
         printf("LED_Task2 Running,LED2_OFF\r\n");
     }
 }
 
-// ¾²Ì¬´´½¨ÄãÈÎÎñÊ±ĞèÒª	
+// é™æ€åˆ›å»ºä½ ä»»åŠ¡æ—¶éœ€è¦	
 
 ///**
 //  **********************************************************************
-//  * @brief  »ñÈ¡¿ÕÏĞÈÎÎñµÄÈÎÎñ¶ÑÕ»ºÍÈÎÎñ¿ØÖÆ¿éÄÚ´æ
-//	*					ppxTimerTaskTCBBuffer	:		ÈÎÎñ¿ØÖÆ¿éÄÚ´æ
-//	*					ppxTimerTaskStackBuffer	:	ÈÎÎñ¶ÑÕ»ÄÚ´æ
-//	*					pulTimerTaskStackSize	:		ÈÎÎñ¶ÑÕ»´óĞ¡
+//  * @brief  è·å–ç©ºé—²ä»»åŠ¡çš„ä»»åŠ¡å †æ ˆå’Œä»»åŠ¡æ§åˆ¶å—å†…å­˜
+//	*					ppxTimerTaskTCBBuffer	:		ä»»åŠ¡æ§åˆ¶å—å†…å­˜
+//	*					ppxTimerTaskStackBuffer	:	ä»»åŠ¡å †æ ˆå†…å­˜
+//	*					pulTimerTaskStackSize	:		ä»»åŠ¡å †æ ˆå¤§å°
 //  * @author  fire
 //  * @version V1.0
 //  * @date    2018-xx-xx
@@ -275,17 +275,17 @@ static void LED_Task2(void* parameter)
 //								   StackType_t **ppxIdleTaskStackBuffer, 
 //								   uint32_t *pulIdleTaskStackSize)
 //{
-//	*ppxIdleTaskTCBBuffer=&Idle_Task_TCB;/* ÈÎÎñ¿ØÖÆ¿éÄÚ´æ */
-//	*ppxIdleTaskStackBuffer=Idle_Task_Stack;/* ÈÎÎñ¶ÑÕ»ÄÚ´æ */
-//	*pulIdleTaskStackSize=configMINIMAL_STACK_SIZE;/* ÈÎÎñ¶ÑÕ»´óĞ¡ */
+//	*ppxIdleTaskTCBBuffer=&Idle_Task_TCB;/* ä»»åŠ¡æ§åˆ¶å—å†…å­˜ */
+//	*ppxIdleTaskStackBuffer=Idle_Task_Stack;/* ä»»åŠ¡å †æ ˆå†…å­˜ */
+//	*pulIdleTaskStackSize=configMINIMAL_STACK_SIZE;/* ä»»åŠ¡å †æ ˆå¤§å° */
 //}
 //
 ///**
 //  *********************************************************************
-//  * @brief  »ñÈ¡¶¨Ê±Æ÷ÈÎÎñµÄÈÎÎñ¶ÑÕ»ºÍÈÎÎñ¿ØÖÆ¿éÄÚ´æ
-//	*					ppxTimerTaskTCBBuffer	:		ÈÎÎñ¿ØÖÆ¿éÄÚ´æ
-//	*					ppxTimerTaskStackBuffer	:	ÈÎÎñ¶ÑÕ»ÄÚ´æ
-//	*					pulTimerTaskStackSize	:		ÈÎÎñ¶ÑÕ»´óĞ¡
+//  * @brief  è·å–å®šæ—¶å™¨ä»»åŠ¡çš„ä»»åŠ¡å †æ ˆå’Œä»»åŠ¡æ§åˆ¶å—å†…å­˜
+//	*					ppxTimerTaskTCBBuffer	:		ä»»åŠ¡æ§åˆ¶å—å†…å­˜
+//	*					ppxTimerTaskStackBuffer	:	ä»»åŠ¡å †æ ˆå†…å­˜
+//	*					pulTimerTaskStackSize	:		ä»»åŠ¡å †æ ˆå¤§å°
 //  * @author  fire
 //  * @version V1.0
 //  * @date    2018-xx-xx
@@ -295,8 +295,8 @@ static void LED_Task2(void* parameter)
 //									StackType_t **ppxTimerTaskStackBuffer, 
 //									uint32_t *pulTimerTaskStackSize)
 //{
-//	*ppxTimerTaskTCBBuffer=&Timer_Task_TCB;/* ÈÎÎñ¿ØÖÆ¿éÄÚ´æ */
-//	*ppxTimerTaskStackBuffer=Timer_Task_Stack;/* ÈÎÎñ¶ÑÕ»ÄÚ´æ */
-//	*pulTimerTaskStackSize=configTIMER_TASK_STACK_DEPTH;/* ÈÎÎñ¶ÑÕ»´óĞ¡ */
+//	*ppxTimerTaskTCBBuffer=&Timer_Task_TCB;/* ä»»åŠ¡æ§åˆ¶å—å†…å­˜ */
+//	*ppxTimerTaskStackBuffer=Timer_Task_Stack;/* ä»»åŠ¡å †æ ˆå†…å­˜ */
+//	*pulTimerTaskStackSize=configTIMER_TASK_STACK_DEPTH;/* ä»»åŠ¡å †æ ˆå¤§å° */
 //}
 

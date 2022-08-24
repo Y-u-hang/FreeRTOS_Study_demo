@@ -216,7 +216,7 @@ static void prvTaskExitError( void );
  */
 StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters )
 {
-	//���� CM3 ѹջ��ʽ����������ֶ�����һ�Σ��oÿ���Ĵ����ք��xֵ
+	//按照 CM3 压栈方式，这个函数手动做了一次：給每個寄存器手動賦值
 	/* Simulate the stack frame as it would be created by a context switch
 	interrupt. */
 	pxTopOfStack--; /* Offset added to account for the way the MCU uses the stack on entry/exit of interrupts. */
@@ -251,17 +251,17 @@ static void prvTaskExitError( void )
 __asm void vPortSVCHandler( void )
 {
 	PRESERVE8
-//	pxCurrentTCB ָ�����������ȼ��� Ready ״̬������ָ�룻���� pxCurrentTCB ��ȡ����Ӧ tskTCB�ĵ�ַ��
-//	Ȼ���ȡ��һ����Ա����pxTopOfStack����Ҳ���ǵ�ǰ�����ջ����ַ��
-//	�����񴴽�xTaskCreate��ʱ����Ҫģ��� Cortex ���쳣��ջ˳���������ݷ��ã�
+//	pxCurrentTCB 指向的是最高优先级的 Ready 状态的任务指针；根据 pxCurrentTCB 获取到对应 tskTCB的地址；
+//	然后获取第一个成员变量pxTopOfStack；，也就是当前任务的栈顶地址；
+//	在任务创建xTaskCreate的时候，需要模拟的 Cortex 的异常入栈顺序，做好数据放置；
 //	
-//	ʹ�� LDMIA ָ��� pxTopOfStack ��ʼ˳���ջ���ȳ� R4~R11���ڴ��������ʱ�������ջ�ľ�����Щ������ͬʱ R0 ������
+//	使用 LDMIA 指令，以 pxTopOfStack 开始顺序出栈，先出 R4~R11（在创建任务的时候，最后入栈的就是这些个），同时 R0 递增；
 //	
-//	���˿̵� R0 ��ֵ�� PSP����Ϊ��ջ��ʱ�򣬴������ᰴ����ջ��˳��ȥȡ R4-R11��R14������Щ�Ĵ��������Ǵ��������ʱ���Ѿ��ֶ�ѹջ��
+//	将此刻的 R0 赋值给 PSP（因为出栈的时候，处理器会按照入栈的顺序去取 R4-R11、R14，而这些寄存器在我们创建任务的时候已经手动压栈）
 //	
-//	�� BASEPRI �Ĵ�����ֵΪ 0��Ҳ���������κ��ж�
+//	将 BASEPRI 寄存器赋值为 0，也就是允许任何中断
 //	
-//	���ִ�� bx R14�����ߴ����� ISR ��ɣ���Ҫ���أ��˿̴����������г�ջ������PC �����Ǹ�ֵ��Ϊ��ִ������ĺ�������ڣ�Ҳ����ʽ��������
+//	最后执行 bx R14，告诉处理器 ISR 完成，需要返回，此刻处理器便会进行出栈操作，PC 被我们赋值成为了执行任务的函数的入口，也即正式跑起来；
 
 	ldr	r3, =pxCurrentTCB	/* Restore the context. */
 	ldr r1, [r3]			/* Use pxCurrentTCBConst to get the pxCurrentTCB address. */
@@ -281,27 +281,26 @@ __asm void prvStartFirstTask( void )
 	PRESERVE8
 
 	/* Use the NVIC offset register to locate the stack. */
-	// �Д��������ĵ�һ���� __initial_sp 
-//	Cortex-M3 ���������ϵ�Ĭ�Ͻ����̵߳���Ȩģʽ��ʹ�� MSP ��Ϊ��ջָ�룻
-//	���ϵ��ܵ��������һϵ�еĺ������ã���ջ����ջ��MSP ��Ȼ�Ѿ������ʼ�ĳ�ʼ����λ�ã�
-//	����ͨ�� MSR ���³�ʼ�� MSP����������ջ�е����ݣ�  ����һ������·�������ܵ���������ٷ���֮ǰ�ĵ���·����
-//	
-//	���� svc ������ϵͳ���ú�Ϊ 0 ���� SVC �ж�
+		// 中斷向量表的第一個是 __initial_sp 
+	//	Cortex-M3 处理器，上电默认进入线程的特权模式，使用 MSP 作为堆栈指针；
+	//	从上电跑到这里，经过一系列的函数调用，出栈，入栈，MSP 自然已经不是最开始的初始化的位置；
+	//	这里通过 MSR 重新初始化 MSP，丢弃主堆栈中的数据；  这是一条不归路，代码跑到这里，不会再返回之前的调用路径。
+	//	
+	//	调用 svc 并传入系统调用号为 0 启动 SVC 中断
 
-
-	ldr r0, =0xE000ED08	// //  0xE000ED08 ��ַ��ΪVTOR��������ƫ�������Ĵ������洢��������ʼ��ַ
-	ldr r0, [r0]		//  �����ļ���, �����ַ���õ�__initial_sp 
-	ldr r0, [r0]		//  ����������ʵ�ʴ洢��ַ��ȡ���������еĵ�һ���������һ��洢����ջָ�� MSP �ĳ�ʼֵ
+	ldr r0, =0xE000ED08	// //  0xE000ED08 地址处为VTOR（向量表偏移量）寄存器，存储向量表起始地址
+	ldr r0, [r0]		//  启动文件中, 最初地址放置的__initial_sp 
+	ldr r0, [r0]		//  根据向量表实际存储地址，取出向量表中的第一项，向量表第一项存储主堆栈指针 MSP 的初始值
 
 	/* Set the msp back to the start of the stack. */
-	msr msp, r0			//  �� __initial_sp�ĳ�ʼֵд�� MSP ��
+	msr msp, r0			//  将 __initial_sp的初始值写入 MSP 中
 	/* Globally enable interrupts. */
 	cpsie i
 	cpsie f
 	dsb
 	isb
 	/* Call SVC to start the first task. */
-	svc 0				 //    ����SVC�ж�  
+	svc 0				 //    调用SVC中断  
 	nop
 	nop
 }
@@ -641,7 +640,7 @@ void xPortSysTickHandler( void )
 		}
 		#endif /* configUSE_TICKLESS_IDLE */
 
-		/* Configure SysTick to interrupt at the requested rate. */ // �ն�Ƶ��
+		/* Configure SysTick to interrupt at the requested rate. */ // 终端频率
 		portNVIC_SYSTICK_LOAD_REG = ( configSYSTICK_CLOCK_HZ / configTICK_RATE_HZ ) - 1UL;
 		portNVIC_SYSTICK_CTRL_REG = ( portNVIC_SYSTICK_CLK_BIT | portNVIC_SYSTICK_INT_BIT | portNVIC_SYSTICK_ENABLE_BIT );
 	}

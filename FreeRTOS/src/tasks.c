@@ -377,7 +377,7 @@ PRIVILEGED_DATA static List_t xDelayedTaskList1;						/*< Delayed tasks. */
 PRIVILEGED_DATA static List_t xDelayedTaskList2;						/*< Delayed tasks (two lists are used - one for delays that have overflowed the current tick count. */
 PRIVILEGED_DATA static List_t * volatile pxDelayedTaskList;				/*< Points to the delayed task list currently being used. */
 PRIVILEGED_DATA static List_t * volatile pxOverflowDelayedTaskList;		/*< Points to the delayed task list currently being used to hold tasks that have overflowed the current tick count. */
-PRIVILEGED_DATA static List_t xPendingReadyList;						/*< Tasks that have been readied while the scheduler was suspended.  They will be moved to the ready list when the scheduler is resumed. */
+PRIVILEGED_DATA static List_t xPendingReadyList;						// 当调度器被挂起的时候 用这个 挂起就序链表/*< Tasks that have been readied while the scheduler was suspended.  They will be moved to the ready list when the scheduler is resumed. */
 
 #if( INCLUDE_vTaskDelete == 1 )
 
@@ -680,7 +680,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 							UBaseType_t uxPriority,
 							TaskHandle_t * const pxCreatedTask ) /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
 	{
-	// �ڴ�ѵĳ�ʼ���������
+	// 内存堆的初始化都会完成
 	TCB_t *pxNewTCB;
 	BaseType_t xReturn;
 
@@ -751,7 +751,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			#endif /* configSUPPORT_STATIC_ALLOCATION */
 
 			prvInitialiseNewTask( pxTaskCode, pcName, ( uint32_t ) usStackDepth, pvParameters, uxPriority, pxCreatedTask, pxNewTCB, NULL );
-			prvAddNewTaskToReadyList( pxNewTCB ); // ���������� �����б���
+			prvAddNewTaskToReadyList( pxNewTCB ); // 添加新任务到 就序列表中
 			xReturn = pdPASS;
 		}
 		else
@@ -1059,7 +1059,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 			/* Remove task from the ready list. */
 			if( uxListRemove( &( pxTCB->xStateListItem ) ) == ( UBaseType_t ) 0 )
 			{
-				taskRESET_READY_PRIORITY( pxTCB->uxPriority );
+				taskRESET_READY_PRIORITY( pxTCB->uxPriority ); // 优先级的修改，当前优先级的位置进行取反操作进行位图的清楚
 			}
 			else
 			{
@@ -1069,6 +1069,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 			/* Is the task waiting on an event also? */
 			if( listLIST_ITEM_CONTAINER( &( pxTCB->xEventListItem ) ) != NULL )
 			{
+			//	等待事件的列表中删除掉
 				( void ) uxListRemove( &( pxTCB->xEventListItem ) );
 			}
 			else
@@ -1089,6 +1090,11 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 				Place the task in the termination list.  The idle task will
 				check the termination list and free up any memory allocated by
 				the scheduler for the TCB and stack of the deleted task. */
+				// 删除当前任务时， 需要将这个任务 在空闲状态下进行删除，也就是僵尸任务
+				// 任务运行时 是不能立马进行删除的 需要将当前任务放在回收列表中xTasksWaitingTermination
+				// 空闲任务会检查结束列表并在空闲任务orvIdke中进行释放删除任务的控制块和已删除任务的堆栈内存
+				// 删除任务时 只会自动释放 内核本身的分配的空间 能理解吧  手动的malloc 需要手动释放
+
 				vListInsertEnd( &xTasksWaitingTermination, &( pxTCB->xStateListItem ) );
 
 				/* Increment the ucTasksDeleted variable so the idle task knows
@@ -1140,9 +1146,14 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 
 	void vTaskDelayUntil( TickType_t * const pxPreviousWakeTime, const TickType_t xTimeIncrement )
 	{
+	// 中断时间不能大于 任务执行时间
+	// 绝对延时 不会影响到任务的阻塞周期，会影响到任务的阻塞时间 （缩短）
 	TickType_t xTimeToWake;
 	BaseType_t xAlreadyYielded, xShouldDelay = pdFALSE;
-
+	// xTimeToWake			下一次唤醒系统的时间点
+	// xConstTickCount		进入延时的时间点	
+	// xTimeIncrement 		任务周期时间
+	// pxPreviousWakeTime 	上一次唤醒的时间点
 		configASSERT( pxPreviousWakeTime );
 		configASSERT( ( xTimeIncrement > 0U ) );
 		configASSERT( uxSchedulerSuspended == 0 );
@@ -1223,6 +1234,8 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 #if ( INCLUDE_vTaskDelay == 1 )
 
 	void vTaskDelay( const TickType_t xTicksToDelay )
+	// 非周期延时  比如在运行的时候 被一个中断进行抢占时间后，待恢复之后还会将这个任务的延时时间搞完，也就是说 这个延时和运行的时间和 中断的时间没有关系，也就是非周期的
+	// vTaskDelayUntil 周期的，中断的时间会影响到 
 	{
 	BaseType_t xAlreadyYielded = pdFALSE;
 
@@ -1572,14 +1585,15 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 		{
 			/* If null is passed in here then it is the running task that is
 			being suspended. */
-			pxTCB = prvGetTCBFromHandle( xTaskToSuspend );
+			pxTCB = prvGetTCBFromHandle( xTaskToSuspend );	// 获取当前任务控制块句柄
 
 			traceTASK_SUSPEND( pxTCB );
 
-			/* Remove task from the ready/delayed list and place in the
+			/* Remove task from the  ready/delayed  list and place in the
 			suspended list. */
 			if( uxListRemove( &( pxTCB->xStateListItem ) ) == ( UBaseType_t ) 0 )
 			{
+				// 就绪和阻塞状态没有任务，那就将ready列表设置为最高优先级 0 ，就绪和阻塞列表都没有 任务控制块？？？
 				taskRESET_READY_PRIORITY( pxTCB->uxPriority );
 			}
 			else
@@ -1618,7 +1632,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 
 		if( pxTCB == pxCurrentTCB )
 		{
-			if( xSchedulerRunning != pdFALSE )
+			if( xSchedulerRunning != pdFALSE )	// 若需要挂起的任务是 当前任务 ，并需要切换 下一个就绪任务 portYIELD_WITHIN_API
 			{
 				/* The current task has just been suspended. */
 				configASSERT( uxSchedulerSuspended == 0 );
@@ -1787,7 +1801,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 				traceTASK_RESUME_FROM_ISR( pxTCB );
 
 				/* Check the ready lists can be accessed. */
-				if( uxSchedulerSuspended == ( UBaseType_t ) pdFALSE )
+				if( uxSchedulerSuspended == ( UBaseType_t ) pdFALSE )	// 调度器没有被挂起
 				{
 					/* Ready lists can be accessed so move the task from the
 					suspended list to the ready list directly. */
@@ -1808,6 +1822,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 					/* The delayed or ready lists cannot be accessed so the task
 					is held in the pending ready list until the scheduler is
 					unsuspended. */
+					// 调度器挂起时  就绪链表访问不了，需要把挂起的任务添加到 调度器挂起就绪链表中
 					vListInsertEnd( &( xPendingReadyList ), &( pxTCB->xEventListItem ) );
 				}
 			}
@@ -1948,7 +1963,7 @@ void vTaskSuspendAll( void )
 	BaseType_t.  Please read Richard Barry's reply in the following link to a
 	post in the FreeRTOS support forum before reporting this as a bug! -
 	http://goo.gl/wu4acr */
-	++uxSchedulerSuspended;
+	++uxSchedulerSuspended;	// 挂起调度器的次数？ 怎么理解？
 }
 /*----------------------------------------------------------*/
 
@@ -2033,14 +2048,15 @@ BaseType_t xAlreadyYielded = pdFALSE;
 	{
 		--uxSchedulerSuspended;
 
-		if( uxSchedulerSuspended == ( UBaseType_t ) pdFALSE )
+		if( uxSchedulerSuspended == ( UBaseType_t ) pdFALSE )	// 当 计数值 自减到0时
 		{
-			if( uxCurrentNumberOfTasks > ( UBaseType_t ) 0U )
+			if( uxCurrentNumberOfTasks > ( UBaseType_t ) 0U )	// 
 			{
 				/* Move any readied tasks from the pending list into the
 				appropriate ready list. */
 				while( listLIST_IS_EMPTY( &xPendingReadyList ) == pdFALSE )
-				{
+				{	// 调度器挂起后 通过中断添加到 挂起就绪列表的中的时候
+					// 这个时候需要将挂起就绪链表中的任务块删除 并添加到就绪链表中，。
 					pxTCB = ( TCB_t * ) listGET_OWNER_OF_HEAD_ENTRY( ( &xPendingReadyList ) );
 					( void ) uxListRemove( &( pxTCB->xEventListItem ) );
 					( void ) uxListRemove( &( pxTCB->xStateListItem ) );
@@ -2049,7 +2065,8 @@ BaseType_t xAlreadyYielded = pdFALSE;
 					/* If the moved task has a priority higher than the current
 					task then a yield must be performed. */
 					if( pxTCB->uxPriority >= pxCurrentTCB->uxPriority )
-					{
+					{	
+						// 当就绪列表的需要恢复的任务控制块的优先级大于 当前任务的优先级时，需要准备进行一次任务的切换，这个时候将标志位进行一次刷新
 						xYieldPending = pdTRUE;
 					}
 					else
@@ -2066,6 +2083,7 @@ BaseType_t xAlreadyYielded = pdFALSE;
 					important for low power tickless implementations, where
 					this can prevent an unnecessary exit from low power
 					state. */
+					// 刷新下一个任务的阻塞时间
 					prvResetNextTaskUnblockTime();
 				}
 
@@ -2074,6 +2092,7 @@ BaseType_t xAlreadyYielded = pdFALSE;
 				not	slip, and that any delayed tasks are resumed at the correct
 				time. */
 				{
+					// 更新时基确保滴答计时器的计数不会滑动
 					UBaseType_t uxPendedCounts = uxPendedTicks; /* Non-volatile copy. */
 
 					if( uxPendedCounts > ( UBaseType_t ) 0U )
@@ -3635,6 +3654,7 @@ static void prvCheckTasksWaitingTermination( void )
 
 static void prvResetNextTaskUnblockTime( void )
 {
+// 若挂起的任务在等待信号啥的 ， 并需要将等待的时间重置，下一个阻塞任务的等待时间
 TCB_t *pxTCB;
 
 	if( listLIST_IS_EMPTY( pxDelayedTaskList ) != pdFALSE )
