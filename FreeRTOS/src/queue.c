@@ -396,8 +396,8 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 #if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
 
 	QueueHandle_t xQueueGenericCreate( const UBaseType_t uxQueueLength,
-		const UBaseType_t uxItemSize,
-		const uint8_t ucQueueType )
+											const UBaseType_t uxItemSize,
+											const uint8_t ucQueueType )
 	{
 	Queue_t *pxNewQueue;
 	size_t xQueueSizeInBytes;
@@ -1428,7 +1428,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 				}
 				#endif
 
-					( &( pxQueue->xTasksWaitingToReceive ), xTicksToWait );
+				vTaskPlaceOnEventList( &( pxQueue->xTasksWaitingToReceive ), xTicksToWait );
 				prvUnlockQueue( pxQueue );
 				if( xTaskResumeAll() == pdFALSE )
 				{
