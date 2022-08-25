@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -117,8 +117,12 @@ zero. */
 #if( configUSE_PREEMPTION == 0 )
 	/* If the cooperative scheduler is being used then a yield should not be
 	performed just because a higher priority task has been woken. */
+	/*
+		如果正在使用协作调度程序，则不应仅仅因为已唤醒更高优先级的任务而执行让出。	
+	*/
 	#define queueYIELD_IF_USING_PREEMPTION()
 #else
+	// 进行任务切换
 	#define queueYIELD_IF_USING_PREEMPTION() portYIELD_WITHIN_API()
 #endif
 
@@ -276,7 +280,8 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength, const UBaseT
 	taskEXIT_CRITICAL()
 /*-----------------------------------------------------------*/
 
-BaseType_t xQueueGenericReset( QueueHandle_t xQueue, BaseType_t xNewQueue )
+BaseType_t xQueueGenericReset( QueueHandle_t xQueue,	// 消息队列的起始地址 不包括头
+								BaseType_t xNewQueue )	// 
 {
 Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 
@@ -287,6 +292,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 		pxQueue->pcTail = pxQueue->pcHead + ( pxQueue->uxLength * pxQueue->uxItemSize );
 		pxQueue->uxMessagesWaiting = ( UBaseType_t ) 0U;
 		pxQueue->pcWriteTo = pxQueue->pcHead;
+		// 从队列中读取 消息，偏移指针到 倒数第一个消息的头指针
 		pxQueue->u.pcReadFrom = pxQueue->pcHead + ( ( pxQueue->uxLength - ( UBaseType_t ) 1U ) * pxQueue->uxItemSize );
 		pxQueue->cRxLock = queueUNLOCKED;
 		pxQueue->cTxLock = queueUNLOCKED;
@@ -298,6 +304,11 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 			will still be empty.  If there are tasks blocked waiting to write to
 			the queue, then one should be unblocked as after this function exits
 			it will be possible to write to it. */
+			/*
+			如果有任务阻塞等待从队列中读取，则在此函数退出队列后，任务将保持阻塞状态
+			仍然是空的。如果有任务阻塞等待写入队列，然后应该在此函数退出后解除阻塞
+			可以写信给它
+			*/
 			if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToSend ) ) == pdFALSE )
 			{
 				if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToSend ) ) != pdFALSE )
@@ -317,6 +328,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 		else
 		{
 			/* Ensure the event queues start in the correct state. */
+			// 初始化 等待和发送队列
 			vListInitialise( &( pxQueue->xTasksWaitingToSend ) );
 			vListInitialise( &( pxQueue->xTasksWaitingToReceive ) );
 		}
@@ -383,7 +395,9 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 
 #if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
 
-	QueueHandle_t xQueueGenericCreate( const UBaseType_t uxQueueLength, const UBaseType_t uxItemSize, const uint8_t ucQueueType )
+	QueueHandle_t xQueueGenericCreate( const UBaseType_t uxQueueLength,
+		const UBaseType_t uxItemSize,
+		const uint8_t ucQueueType )
 	{
 	Queue_t *pxNewQueue;
 	size_t xQueueSizeInBytes;
@@ -400,15 +414,17 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 		{
 			/* Allocate enough space to hold the maximum number of items that
 			can be in the queue at any time. */
+			// 队列有效数据长度
 			xQueueSizeInBytes = ( size_t ) ( uxQueueLength * uxItemSize ); /*lint !e961 MISRA exception as the casts are only redundant for some ports. */
 		}
-
+		// 都指向队列的指针， 队列的长度还要加上队列头结构大小 消息队列控制块
 		pxNewQueue = ( Queue_t * ) pvPortMalloc( sizeof( Queue_t ) + xQueueSizeInBytes );
 
 		if( pxNewQueue != NULL )
 		{
 			/* Jump past the queue structure to find the location of the queue
 			storage area. */
+			// 消息队列的起始地址，向后偏移 消息控制块
 			pucQueueStorage = ( ( uint8_t * ) pxNewQueue ) + sizeof( Queue_t );
 
 			#if( configSUPPORT_STATIC_ALLOCATION == 1 )
@@ -429,7 +445,11 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 #endif /* configSUPPORT_STATIC_ALLOCATION */
 /*-----------------------------------------------------------*/
 
-static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength, const UBaseType_t uxItemSize, uint8_t *pucQueueStorage, const uint8_t ucQueueType, Queue_t *pxNewQueue )
+static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
+											const UBaseType_t uxItemSize,
+											uint8_t *pucQueueStorage,	//消息队列控制块的起始地址
+											const uint8_t ucQueueType,	// 消息队列的类型
+											Queue_t *pxNewQueue )		// 消息队列的起始地址
 {
 	/* Remove compiler warnings about unused parameters should
 	configUSE_TRACE_FACILITY not be set to 1. */
@@ -441,6 +461,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength, const UBaseT
 		be set to NULL because NULL is used as a key to say the queue is used as
 		a mutex.  Therefore just set pcHead to point to the queue as a benign
 		value that is known to be within the memory map. */
+		// 指向自己
 		pxNewQueue->pcHead = ( int8_t * ) pxNewQueue;
 	}
 	else
@@ -720,7 +741,10 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength, const UBaseT
 #endif /* ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
-BaseType_t xQueueGenericSend( QueueHandle_t xQueue, const void * const pvItemToQueue, TickType_t xTicksToWait, const BaseType_t xCopyPosition )
+BaseType_t xQueueGenericSend( QueueHandle_t xQueue,						// 队列句柄	
+									const void * const pvItemToQueue,	// 消息指针
+									TickType_t xTicksToWait,			// 等待时间
+									const BaseType_t xCopyPosition )	// 发送到队列的位置和方式
 {
 BaseType_t xEntryTimeSet = pdFALSE, xYieldRequired;
 TimeOut_t xTimeOut;
@@ -747,6 +771,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 			highest priority task wanting to access the queue.  If the head item
 			in the queue is to be overwritten then it does not matter if the
 			queue is full. */
+			// 没有满 并且 拷贝写入
 			if( ( pxQueue->uxMessagesWaiting < pxQueue->uxLength ) || ( xCopyPosition == queueOVERWRITE ) )
 			{
 				traceQUEUE_SEND( pxQueue );
@@ -874,6 +899,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 		prvLockQueue( pxQueue );
 
 		/* Update the timeout state to see if it has expired yet. */
+		// 消息还在等待时间内，需要将会任务挂起
 		if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) == pdFALSE )
 		{
 			if( prvIsQueueFull( pxQueue ) != pdFALSE )
@@ -918,7 +944,10 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 }
 /*-----------------------------------------------------------*/
 
-BaseType_t xQueueGenericSendFromISR( QueueHandle_t xQueue, const void * const pvItemToQueue, BaseType_t * const pxHigherPriorityTaskWoken, const BaseType_t xCopyPosition )
+BaseType_t xQueueGenericSendFromISR( QueueHandle_t xQueue,
+											const void * const pvItemToQueue,
+											BaseType_t * const pxHigherPriorityTaskWoken,	// 判断解除任务的优先级
+											const BaseType_t xCopyPosition )
 {
 BaseType_t xReturn;
 UBaseType_t uxSavedInterruptStatus;
@@ -1234,7 +1263,10 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 }
 /*-----------------------------------------------------------*/
 
-BaseType_t xQueueGenericReceive( QueueHandle_t xQueue, void * const pvBuffer, TickType_t xTicksToWait, const BaseType_t xJustPeeking )
+BaseType_t xQueueGenericReceive( QueueHandle_t xQueue,
+										void * const pvBuffer,
+										TickType_t xTicksToWait,
+										const BaseType_t xJustPeeking )	// 判断是否进行删除或者复制
 {
 BaseType_t xEntryTimeSet = pdFALSE;
 TimeOut_t xTimeOut;
@@ -1265,16 +1297,16 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 			{
 				/* Remember the read position in case the queue is only being
 				peeked. */
-				pcOriginalReadPosition = pxQueue->u.pcReadFrom;
+				pcOriginalReadPosition = pxQueue->u.pcReadFrom;// 从哪里读取
 
-				prvCopyDataFromQueue( pxQueue, pvBuffer );
+				prvCopyDataFromQueue( pxQueue, pvBuffer );	// 拷贝到buffer
 
 				if( xJustPeeking == pdFALSE )
 				{
 					traceQUEUE_RECEIVE( pxQueue );
 
 					/* Actually removing data, not just peeking. */
-					pxQueue->uxMessagesWaiting = uxMessagesWaiting - 1;
+					pxQueue->uxMessagesWaiting = uxMessagesWaiting - 1;	// 删除队列中这个消息
 
 					#if ( configUSE_MUTEXES == 1 )
 					{
@@ -1291,6 +1323,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 					}
 					#endif /* configUSE_MUTEXES */
 
+					// 查看等待发送队列的状态
 					if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToSend ) ) == pdFALSE )
 					{
 						if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToSend ) ) != pdFALSE )
@@ -1371,6 +1404,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 		prvLockQueue( pxQueue );
 
 		/* Update the timeout state to see if it has expired yet. */
+		// 阻塞等待
 		if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) == pdFALSE )
 		{
 			if( prvIsQueueEmpty( pxQueue ) != pdFALSE )
@@ -1394,7 +1428,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 				}
 				#endif
 
-				vTaskPlaceOnEventList( &( pxQueue->xTasksWaitingToReceive ), xTicksToWait );
+					( &( pxQueue->xTasksWaitingToReceive ), xTicksToWait );
 				prvUnlockQueue( pxQueue );
 				if( xTaskResumeAll() == pdFALSE )
 				{
@@ -1639,6 +1673,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 	{
 		/* The queue can only have been allocated dynamically - free it
 		again. */
+		// 直接 free掉 就OK
 		vPortFree( pxQueue );
 	}
 	#elif( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
@@ -1694,7 +1729,9 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 #endif /* configUSE_TRACE_FACILITY */
 /*-----------------------------------------------------------*/
 
-static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue, const void *pvItemToQueue, const BaseType_t xPosition )
+static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue,
+											const void *pvItemToQueue,
+											const BaseType_t xPosition )
 {
 BaseType_t xReturn = pdFALSE;
 UBaseType_t uxMessagesWaiting;
@@ -2500,7 +2537,8 @@ BaseType_t xReturn;
 
 #if ( configUSE_QUEUE_SETS == 1 )
 
-	static BaseType_t prvNotifyQueueSetContainer( const Queue_t * const pxQueue, const BaseType_t xCopyPosition )
+	static BaseType_t prvNotifyQueueSetContainer( const Queue_t * const pxQueue,
+															const BaseType_t xCopyPosition )
 	{
 	Queue_t *pxQueueSetContainer = pxQueue->pxQueueSetContainer;
 	BaseType_t xReturn = pdFALSE;
@@ -2510,7 +2548,7 @@ BaseType_t xReturn;
 		configASSERT( pxQueueSetContainer );
 		configASSERT( pxQueueSetContainer->uxMessagesWaiting < pxQueueSetContainer->uxLength );
 
-		if( pxQueueSetContainer->uxMessagesWaiting < pxQueueSetContainer->uxLength )
+		if( pxQueueSetContainer->uxMessagesWaiting < pxQueueSetContainer->uxLength ) // 沒有滿
 		{
 			const int8_t cTxLock = pxQueueSetContainer->cTxLock;
 

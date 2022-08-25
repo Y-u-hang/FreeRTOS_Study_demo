@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -745,6 +745,7 @@ extern "C" {
 #endif
 
 #ifndef mtCOVERAGE_TEST_MARKER
+	// 这个宏的内容需要自己定义 默认没开
 	#define mtCOVERAGE_TEST_MARKER()
 #endif
 
