@@ -23,12 +23,18 @@
 #include "bsp_key.h" 
 #include "queue.h"
 #include "semphr.h"
+#include "limits.h"
+
 /******************************* 宏定义 ************************************/
 /*
  * 当我们在写应用程序的时候，可能需要用到一些宏定义。
  */
 #define  QUEUE_LEN    4   /* 队列的长度，最大可包含多少个消息 */
 #define  QUEUE_SIZE   4   /* 队列中每个消息大小（字节） */
+/*
+ * 当我们在写应用程序的时候，可能需要用到一些宏定义。
+ */
+#define  USE_CHAR  1  /* 测试字符串的时候配置为 1 ，测试变量配置为 0  */
 
 /**************************** 任务句柄 ********************************/
 /* 
@@ -59,7 +65,13 @@ static TaskHandle_t Take_Task_Handle = NULL;
 static TaskHandle_t Give_Task_Handle = NULL;
 
 
+static TaskHandle_t LowPriority_Task_Handle = NULL;
+static TaskHandle_t MidPriority_Task_Handle = NULL;
+static TaskHandle_t HighPriority_Task_Handle = NULL;
 
+static TaskHandle_t Receive1_Task_Handle = NULL;/* Receive1_Task任务句柄 */
+static TaskHandle_t Receive2_Task_Handle = NULL;/* Receive2_Task任务句柄 */
+static TaskHandle_t Send_Task_Notify_Handle = NULL;/* Send_Task任务句柄 */
 
 
 /********************************** 内核对象句柄 *********************************/
@@ -74,8 +86,10 @@ static TaskHandle_t Give_Task_Handle = NULL;
  * 
  */
 QueueHandle_t Test_Queue =NULL;
-SemaphoreHandle_t BinarySem_Handle =NULL;
-SemaphoreHandle_t CountSem_Handle =NULL;
+SemaphoreHandle_t BinarySem_Handle =NULL;	// 二值信号量
+SemaphoreHandle_t CountSem_Handle =NULL;	// 计数信号量
+SemaphoreHandle_t MuxSem_Handle =NULL;		// 互斥信号量
+
 
 
 /******************************* 全局变量声明 ************************************/
@@ -119,6 +133,15 @@ static void Receive_Task(void* parameter);
 static void Send_Task(void* parameter);
 static void Take_Task(void* parameter);
 static void Give_Task(void* parameter);
+static void MuxSemHandleDemo(void);
+static void LowPriority_Task(void* parameter);
+static void MidPriority_Task(void* parameter);
+static void HighPriority_Task(void* parameter);
+static void Receive1_Task(void* pvParameters);/* Receive1_Task任务实现 */
+static void Receive2_Task(void* pvParameters);/* Receive2_Task任务实现 */
+static void Send_Task_Notify(void* pvParameters);/* Send_Task任务实现 */
+
+static void xTaskNotifyDemo(void);
 
 
 /**
@@ -313,13 +336,14 @@ static void AppTaskCreate(void)
                         (void*          )NULL,/* 任务入口函数参数 */
                         (UBaseType_t    )5, /* 任务的优先级 */
                         (TaskHandle_t*  )&Give_Task_Handle);/* 任务控制块指针 */ 
-  if(pdPASS == xReturn)
-    printf("创建Give_Task任务成功!\n\n");
+  	if(pdPASS == xReturn)
+    	printf("创建Give_Task任务成功!\n\n");
   
-
-  vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
-  vTaskDelete(LED_Task_Handle2);
-  vTaskDelete(LED_Task_Handle);
+	// MuxSemHandleDemo();
+	xTaskNotifyDemo();
+	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
+	vTaskDelete(LED_Task_Handle2);
+	vTaskDelete(LED_Task_Handle);
   
   taskEXIT_CRITICAL();            //退出临界区
 }
@@ -516,6 +540,329 @@ static void Give_Task(void* parameter)
 				printf( "KEY2被按下，但已无车位可以释放！\n" );							
 		}
 		vTaskDelay(20);     //每20ms扫描一次	
+  }
+}
+static void MuxSemHandleDemo(void)
+{
+	BaseType_t xReturn = pdPASS;
+	/* 创建MuxSem */
+	MuxSem_Handle = xSemaphoreCreateMutex();	 
+	if(NULL != MuxSem_Handle)
+		printf("MuxSem_Handle互斥量创建成功!\r\n");
+	
+	xReturn = xSemaphoreGive( MuxSem_Handle );//给出互斥量
+	if( xReturn == pdTRUE )
+		  printf("释放信号量!\r\n");
+		
+	/* 创建LowPriority_Task任务 */
+	xReturn = xTaskCreate((TaskFunction_t )LowPriority_Task, /* 任务入口函数 */
+							(const char*	)"LowPriority_Task",/* 任务名字 */
+							(uint16_t		)512,	/* 任务栈大小 */
+							(void*			)NULL,	/* 任务入口函数参数 */
+							(UBaseType_t	)2, 	/* 任务的优先级 */
+							(TaskHandle_t*	)&LowPriority_Task_Handle);/* 任务控制块指针 */
+	if(pdPASS == xReturn)
+		printf("创建LowPriority_Task任务成功!\r\n");
+	  
+	  /* 创建MidPriority_Task任务 */
+	xReturn = xTaskCreate((TaskFunction_t )MidPriority_Task,	/* 任务入口函数 */
+							(const char*	)"MidPriority_Task",/* 任务名字 */
+							(uint16_t		)512,  /* 任务栈大小 */
+							(void*			)NULL,/* 任务入口函数参数 */
+							(UBaseType_t	)3, /* 任务的优先级 */
+							(TaskHandle_t*	)&MidPriority_Task_Handle);/* 任务控制块指针 */ 
+	if(pdPASS == xReturn)
+		printf("创建MidPriority_Task任务成功!\n");
+	  
+	  /* 创建HighPriority_Task任务 */
+	xReturn = xTaskCreate((TaskFunction_t )HighPriority_Task,  /* 任务入口函数 */
+							(const char*	)"HighPriority_Task",/* 任务名字 */
+							(uint16_t		)512,  /* 任务栈大小 */
+							(void*			)NULL,/* 任务入口函数参数 */
+							(UBaseType_t	)4, /* 任务的优先级 */
+							(TaskHandle_t*	)&HighPriority_Task_Handle);/* 任务控制块指针 */ 
+	if(pdPASS == xReturn)
+		printf("创建HighPriority_Task任务成功!\n\n");
+	  
+
+}
+static void xTaskNotifyDemo(void){
+
+	BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
+	
+	/* 创建Receive1_Task任务 */
+	xReturn = xTaskCreate((TaskFunction_t )Receive1_Task, /* 任务入口函数 */
+						  (const char*	  )"Receive1_Task",/* 任务名字 */
+						  (uint16_t 	  )512,   /* 任务栈大小 */
+						  (void*		  )NULL,  /* 任务入口函数参数 */
+						  (UBaseType_t	  )5,	  /* 任务的优先级 */
+						  (TaskHandle_t*  )&Receive1_Task_Handle);/* 任务控制块指针 */
+	if(pdPASS == xReturn)
+	  printf("创建Receive1_Task任务成功!\r\n");
+	
+	/* 创建Receive2_Task任务 */
+	xReturn = xTaskCreate((TaskFunction_t )Receive2_Task, /* 任务入口函数 */
+						  (const char*	  )"Receive2_Task",/* 任务名字 */
+						  (uint16_t 	  )512,   /* 任务栈大小 */
+						  (void*		  )NULL,  /* 任务入口函数参数 */
+						  (UBaseType_t	  )6,	  /* 任务的优先级 */
+						  (TaskHandle_t*  )&Receive2_Task_Handle);/* 任务控制块指针 */
+	if(pdPASS == xReturn)
+	  printf("创建Receive2_Task任务成功!\r\n");
+	
+	/* 创建Send_Task任务 */
+	xReturn = xTaskCreate((TaskFunction_t )Send_Task_Notify,  /* 任务入口函数 */
+						  (const char*	  )"Send_Task",/* 任务名字 */
+						  (uint16_t 	  )512,  /* 任务栈大小 */
+						  (void*		  )NULL,/* 任务入口函数参数 */
+						  (UBaseType_t	  )7, /* 任务的优先级 */
+						  (TaskHandle_t*  )&Send_Task_Notify_Handle);/* 任务控制块指针 */ 
+	if(pdPASS == xReturn)
+	  printf("创建Send_Task任务成功!\n\n");
+	
+
+}
+
+
+/**********************************************************************
+  * @ 函数名  ： LowPriority_Task
+  * @ 功能说明： LowPriority_Task任务主体
+  * @ 参数    ：   
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void LowPriority_Task(void* parameter)
+{	
+  static uint32_t i;
+  BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
+  while (1)
+  {
+    printf("LowPriority_Task 获取互斥量\n");
+    //获取互斥量 MuxSem,没获取到则一直等待
+		xReturn = xSemaphoreTake(MuxSem_Handle,/* 互斥量句柄 */
+                              portMAX_DELAY); /* 等待时间 */
+    if(pdTRUE == xReturn)
+    printf("LowPriority_Task Runing\n\n");
+    
+    for(i=0;i<2000000;i++)//模拟低优先级任务占用互斥量
+		{
+			taskYIELD();//发起任务调度
+		}
+    
+    printf("LowPriority_Task 释放互斥量!\r\n");
+    xReturn = xSemaphoreGive( MuxSem_Handle );//给出互斥量
+      
+		LED1_TOGGLE;
+    
+    vTaskDelay(1000);
+  }
+}
+
+/**********************************************************************
+  * @ 函数名  ： MidPriority_Task
+  * @ 功能说明： MidPriority_Task任务主体
+  * @ 参数    ：   
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void MidPriority_Task(void* parameter)
+{	 
+  while (1)
+  {
+   printf("MidPriority_Task Runing\n");
+   vTaskDelay(1000);
+  }
+}
+
+/**********************************************************************
+  * @ 函数名  ： HighPriority_Task
+  * @ 功能说明： HighPriority_Task 任务主体
+  * @ 参数    ：   
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void HighPriority_Task(void* parameter)
+{	
+  BaseType_t xReturn = pdTRUE;/* 定义一个创建信息返回值，默认为pdPASS */
+  while (1)
+  {
+    printf("HighPriority_Task 获取互斥量\n");
+    //获取互斥量 MuxSem,没获取到则一直等待
+		xReturn = xSemaphoreTake(MuxSem_Handle,/* 互斥量句柄 */
+                              portMAX_DELAY); /* 等待时间 */
+    if(pdTRUE == xReturn)
+      printf("HighPriority_Task Runing\n");
+		LED1_TOGGLE;
+    
+    printf("HighPriority_Task 释放互斥量!\r\n");
+    xReturn = xSemaphoreGive( MuxSem_Handle );//给出互斥量
+
+  
+    vTaskDelay(1000);
+  }
+}
+
+
+/**********************************************************************
+  * @ 函数名  ： Receive_Task
+  * @ 功能说明： Receive_Task任务主体
+  * @ 参数    ：   
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void Receive1_Task(void* parameter)
+{	
+  BaseType_t xReturn = pdTRUE;/* 定义一个创建信息返回值，默认为pdPASS */
+#if USE_CHAR
+  char *r_char;
+#else
+  uint32_t r_num;
+#endif
+  while (1)
+  {
+    /* BaseType_t xTaskNotifyWait(uint32_t ulBitsToClearOnEntry, 
+                                  uint32_t ulBitsToClearOnExit, 
+                                  uint32_t *pulNotificationValue, 
+                                  TickType_t xTicksToWait ); 
+     * ulBitsToClearOnEntry：当没有接收到任务通知的时候将任务通知值与此参数的取
+       反值进行按位与运算，当此参数为Oxfffff或者ULONG_MAX的时候就会将任务通知值清零。
+     * ulBits ToClearOnExit：如果接收到了任务通知，在做完相应的处理退出函数之前将
+       任务通知值与此参数的取反值进行按位与运算，当此参数为0xfffff或者ULONG MAX的时候
+       就会将任务通知值清零。
+     * pulNotification Value：此参数用来保存任务通知值。
+     * xTick ToWait：阻塞时间。
+     *
+     * 返回值：pdTRUE：获取到了任务通知。pdFALSE：任务通知获取失败。
+     */
+    //获取任务通知 ,没获取到则一直等待
+		xReturn=xTaskNotifyWait(0x0,			//进入函数的时候不清除任务bit
+                            ULONG_MAX,	  //退出函数的时候清除所有的bit
+#if USE_CHAR
+                            (uint32_t *)&r_char,		  //保存任务通知值
+#else
+                            &r_num,		  //保存任务通知值
+#endif                        
+                            portMAX_DELAY);	//阻塞时间
+    if( pdTRUE == xReturn )
+#if USE_CHAR
+      printf("Receive1_Task 任务通知消息为 %s \n",r_char);                      
+#else
+      printf("Receive1_Task 任务通知消息为 %d \n",r_num);                      
+#endif  
+     
+    
+		LED1_TOGGLE;
+  }
+}
+
+/**********************************************************************
+  * @ 函数名  ： Receive_Task
+  * @ 功能说明： Receive_Task任务主体
+  * @ 参数    ：   
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void Receive2_Task(void* parameter)
+{	
+  BaseType_t xReturn = pdTRUE;/* 定义一个创建信息返回值，默认为pdPASS */
+#if USE_CHAR
+  char *r_char;
+#else
+  uint32_t r_num;
+#endif
+  while (1)
+  {
+    /* BaseType_t xTaskNotifyWait(uint32_t ulBitsToClearOnEntry, 
+                                  uint32_t ulBitsToClearOnExit, 
+                                  uint32_t *pulNotificationValue, 
+                                  TickType_t xTicksToWait ); 
+     * ulBitsToClearOnEntry：当没有接收到任务通知的时候将任务通知值与此参数的取
+       反值进行按位与运算，当此参数为Oxfffff或者ULONG_MAX的时候就会将任务通知值清零。
+     * ulBits ToClearOnExit：如果接收到了任务通知，在做完相应的处理退出函数之前将
+       任务通知值与此参数的取反值进行按位与运算，当此参数为0xfffff或者ULONG MAX的时候
+       就会将任务通知值清零。
+     * pulNotification Value：此参数用来保存任务通知值。
+     * xTick ToWait：阻塞时间。
+     *
+     * 返回值：pdTRUE：获取到了任务通知。pdFALSE：任务通知获取失败。
+     */
+    //获取任务通知 ,没获取到则一直等待
+		xReturn=xTaskNotifyWait(0x0,			//进入函数的时候不清除任务bit
+                            ULONG_MAX,	  //退出函数的时候清除所有的bit
+#if USE_CHAR
+                            (uint32_t *)&r_char,		  //保存任务通知值
+#else
+                            &r_num,		  //保存任务通知值
+#endif                        
+                            portMAX_DELAY);	//阻塞时间
+    if( pdTRUE == xReturn )
+#if USE_CHAR
+      printf("Receive2_Task 任务通知消息为 %s \n",r_char);                      
+#else
+      printf("Receive2_Task 任务通知消息为 %d \n",r_num);                      
+#endif  
+		LED2_TOGGLE;
+  }
+}
+
+/**********************************************************************
+  * @ 函数名  ： Send_Task
+  * @ 功能说明： Send_Task任务主体
+  * @ 参数    ：   
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void Send_Task_Notify(void* parameter)
+{	 
+  BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
+#if USE_CHAR
+  char test_str1[] = "this is a mail test 1";/* 邮箱消息test1 */
+  char test_str2[] = "this is a mail test 2";/* 邮箱消息test2 */
+#else
+  uint32_t send1 = 1;
+  uint32_t send2 = 2;
+#endif
+  
+
+  
+  while (1)
+  {
+    /* KEY1 被按下 */
+    if( Key_Scan(KEY1_GPIO_PORT,KEY1_GPIO_PIN) == KEY_ON )
+    {
+      /* 原型:BaseType_t xTaskNotify( TaskHandle_t xTaskToNotify, 
+                                      uint32_t ulValue, 
+                                      eNotifyAction eAction ); 
+       * eNoAction = 0，通知任务而不更新其通知值。
+       * eSetBits，     设置任务通知值中的位。
+       * eIncrement，   增加任务的通知值。
+       * eSetvaluewithoverwrite，覆盖当前通知
+       * eSetValueWithoutoverwrite 不覆盖当前通知
+       * 
+       * pdFAIL：当参数eAction设置为eSetValueWithoutOverwrite的时候，
+       * 如果任务通知值没有更新成功就返回pdFAIL。
+       * pdPASS: eAction 设置为其他选项的时候统一返回pdPASS。
+      */
+      xReturn = xTaskNotify( Receive1_Task_Handle, /*任务句柄*/
+#if USE_CHAR 
+                             (uint32_t)&test_str1, /* 发送的数据，最大为4字节 */
+#else
+                              send1, /* 发送的数据，最大为4字节 */
+#endif
+                             eSetValueWithOverwrite );/*覆盖当前通知*/
+      
+      if( xReturn == pdPASS )
+        printf("Receive1_Task_Handle 任务通知消息发送成功!\r\n");
+    } 
+    /* KEY2 被按下 */
+    if( Key_Scan(KEY2_GPIO_PORT,KEY2_GPIO_PIN) == KEY_ON )
+    {
+      xReturn = xTaskNotify( Receive2_Task_Handle, /*任务句柄*/
+#if USE_CHAR 
+                             (uint32_t)&test_str2, /* 发送的数据，最大为4字节 */
+#else
+                              send2, /* 发送的数据，最大为4字节 */
+#endif
+                             eSetValueWithOverwrite );/*覆盖当前通知*/
+      /* 此函数只会返回pdPASS */
+      if( xReturn == pdPASS )
+        printf("Receive2_Task_Handle 任务通知消息发送成功!\r\n");
+    }
+    vTaskDelay(20);
   }
 }
 

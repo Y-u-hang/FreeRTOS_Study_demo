@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -200,7 +200,7 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * \defgroup xSemaphoreCreateBinary xSemaphoreCreateBinary
  * \ingroup Semaphores
  */
-#if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+#if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )	// 二值信号量 长度为1
 	#define xSemaphoreCreateBinary() xQueueGenericCreate( ( UBaseType_t ) 1, semSEMAPHORE_QUEUE_ITEM_LENGTH, queueQUEUE_TYPE_BINARY_SEMAPHORE )
 #endif
 
@@ -663,7 +663,8 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * \defgroup xSemaphoreGiveFromISR xSemaphoreGiveFromISR
  * \ingroup Semaphores
  */
-#define xSemaphoreGiveFromISR( xSemaphore, pxHigherPriorityTaskWoken )	xQueueGiveFromISR( ( QueueHandle_t ) ( xSemaphore ), ( pxHigherPriorityTaskWoken ) )
+#define xSemaphoreGiveFromISR( xSemaphore, pxHigherPriorityTaskWoken )\
+	xQueueGiveFromISR( ( QueueHandle_t ) ( xSemaphore ), ( pxHigherPriorityTaskWoken ) )
 
 /**
  * semphr. h

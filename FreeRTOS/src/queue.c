@@ -394,7 +394,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 /*-----------------------------------------------------------*/
 
 #if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
-
+	// 初始化 一下这个队列
 	QueueHandle_t xQueueGenericCreate( const UBaseType_t uxQueueLength,
 											const UBaseType_t uxItemSize,
 											const uint8_t ucQueueType )
@@ -405,7 +405,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 
 		configASSERT( uxQueueLength > ( UBaseType_t ) 0 );
 
-		if( uxItemSize == ( UBaseType_t ) 0 )
+		if( uxItemSize == ( UBaseType_t ) 0 ) 	// 一般是信号量走的地方
 		{
 			/* There is not going to be a queue storage area. */
 			xQueueSizeInBytes = ( size_t ) 0;
@@ -446,7 +446,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 /*-----------------------------------------------------------*/
 
 static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
-											const UBaseType_t uxItemSize,
+											const UBaseType_t uxItemSize,	// 互斥信号量这个值为0
 											uint8_t *pucQueueStorage,	//消息队列控制块的起始地址
 											const uint8_t ucQueueType,	// 消息队列的类型
 											Queue_t *pxNewQueue )		// 消息队列的起始地址
@@ -714,7 +714,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
 /*-----------------------------------------------------------*/
 
 #if( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
-
+	// 计数信号量
 	QueueHandle_t xQueueCreateCountingSemaphore( const UBaseType_t uxMaxCount, const UBaseType_t uxInitialCount )
 	{
 	QueueHandle_t xHandle;
