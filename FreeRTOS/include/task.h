@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -1708,9 +1708,23 @@ void vTaskGetRunTimeStats( char *pcWriteBuffer ) PRIVILEGED_FUNCTION; /*lint !e9
  * \defgroup xTaskNotify xTaskNotify
  * \ingroup TaskNotifications
  */
-BaseType_t xTaskGenericNotify( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, uint32_t *pulPreviousNotificationValue ) PRIVILEGED_FUNCTION;
-#define xTaskNotify( xTaskToNotify, ulValue, eAction ) xTaskGenericNotify( ( xTaskToNotify ), ( ulValue ), ( eAction ), NULL )
-#define xTaskNotifyAndQuery( xTaskToNotify, ulValue, eAction, pulPreviousNotifyValue ) xTaskGenericNotify( ( xTaskToNotify ), ( ulValue ), ( eAction ), ( pulPreviousNotifyValue ) )
+BaseType_t xTaskGenericNotify( TaskHandle_t xTaskToNotify,\
+								uint32_t ulValue,\
+								eNotifyAction eAction,\
+								uint32_t *pulPreviousNotificationValue ) 
+								PRIVILEGED_FUNCTION;
+
+#define xTaskNotify( xTaskToNotify, ulValue, eAction )\
+	xTaskGenericNotify( ( xTaskToNotify ),\
+						( ulValue ),\
+						( eAction ),\
+						NULL )
+						
+#define xTaskNotifyAndQuery( xTaskToNotify, ulValue, eAction, pulPreviousNotifyValue )\
+	xTaskGenericNotify( ( xTaskToNotify ),\
+						( ulValue ),\
+						( eAction ),\
+						( pulPreviousNotifyValue ) )
 
 /**
  * task. h

@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -107,9 +107,9 @@ functions but without including stdio.h here. */
 #endif
 
 /* Values that can be assigned to the ucNotifyState member of the TCB. */
-#define taskNOT_WAITING_NOTIFICATION	( ( uint8_t ) 0 )
-#define taskWAITING_NOTIFICATION		( ( uint8_t ) 1 )
-#define taskNOTIFICATION_RECEIVED		( ( uint8_t ) 2 )
+#define taskNOT_WAITING_NOTIFICATION	( ( uint8_t ) 0 )	// 初始化的状态
+#define taskWAITING_NOTIFICATION		( ( uint8_t ) 1 )	// 通知接收完成
+#define taskNOTIFICATION_RECEIVED		( ( uint8_t ) 2 )	// 需要接收通知
 
 /*
  * The value used to fill the stack of a task when the task is created.  This
@@ -4281,26 +4281,31 @@ TickType_t uxReturn;
 
 #if( configUSE_TASK_NOTIFICATIONS == 1 )
 
-	BaseType_t xTaskNotifyWait( uint32_t ulBitsToClearOnEntry, uint32_t ulBitsToClearOnExit, uint32_t *pulNotificationValue, TickType_t xTicksToWait )
+	BaseType_t xTaskNotifyWait( uint32_t ulBitsToClearOnEntry,		// 在函数开始处将消息对应的位清零
+									uint32_t ulBitsToClearOnExit,	// 在函数退出时将消息对应的位清零，只有在接收到通知才有效
+									uint32_t *pulNotificationValue,	// 接收的消息值
+									TickType_t xTicksToWait )		// 等待阻塞时间
 	{
 	BaseType_t xReturn;
 
 		taskENTER_CRITICAL();
 		{
 			/* Only block if a notification is not already pending. */
-			if( pxCurrentTCB->ucNotifyState != taskNOTIFICATION_RECEIVED )
+			if( pxCurrentTCB->ucNotifyState != taskNOTIFICATION_RECEIVED )	// 如果当前的状态不是 等待通知状态 表示没有任务调用过xTaskGenericNotify
 			{
 				/* Clear bits in the task's notification value as bits may get
 				set	by the notifying task or interrupt.  This can be used to
 				clear the value to zero. */
+				// /*按位设置消息值，消息值可以在中断或通知任务中被设置。这个选项可以用来将消息值清零*/
 				pxCurrentTCB->ulNotifiedValue &= ~ulBitsToClearOnEntry;
 
 				/* Mark this task as waiting for a notification. */
+				/* 消息状态标志位等待通知. */
 				pxCurrentTCB->ucNotifyState = taskWAITING_NOTIFICATION;
 
-				if( xTicksToWait > ( TickType_t ) 0 )
+				if( xTicksToWait > ( TickType_t ) 0 )	// 直到超时或者调用xTaskGenericNotify解除阻塞
 				{
-					prvAddCurrentTaskToDelayedList( xTicksToWait, pdTRUE );
+					prvAddCurrentTaskToDelayedList( xTicksToWait, pdTRUE );	// 添加到延迟队列
 					traceTASK_NOTIFY_WAIT_BLOCK();
 
 					/* All ports are written to allow a yield in a critical
@@ -4336,15 +4341,18 @@ TickType_t uxReturn;
 			blocked state (because a notification was already pending) or the
 			task unblocked because of a notification.  Otherwise the task
 			unblocked because of a timeout. */
+			/*如果有任务调用了xTaskGenericNotify函数，消息状态会被设置为taskNOTIFICATION_RECEIVED，
+			如果消息没有被设置为该值，则表示解除阻塞是因为超时*/
 			if( pxCurrentTCB->ucNotifyState == taskWAITING_NOTIFICATION )
 			{
 				/* A notification was not received. */
 				xReturn = pdFALSE;
 			}
-			else
+			else	//消息状态被设置为taskNOTIFICATION_RECEIVED，说明有任务发送了通知
 			{
 				/* A notification was already pending or a notification was
 				received while the task was waiting. */
+				/* 将通知消息对应的位清零 */
 				pxCurrentTCB->ulNotifiedValue &= ~ulBitsToClearOnExit;
 				xReturn = pdTRUE;
 			}
@@ -4360,8 +4368,11 @@ TickType_t uxReturn;
 /*-----------------------------------------------------------*/
 
 #if( configUSE_TASK_NOTIFICATIONS == 1 )
-
-	BaseType_t xTaskGenericNotify( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, uint32_t *pulPreviousNotificationValue )
+	// 任务通知总执行函数
+	BaseType_t xTaskGenericNotify( TaskHandle_t xTaskToNotify,
+										uint32_t ulValue,
+										eNotifyAction eAction,						// 枚举值 表示不同的通知使用方法 
+										uint32_t *pulPreviousNotificationValue )	// 表示写入之前那个消息的值
 	{
 	TCB_t * pxTCB;
 	BaseType_t xReturn = pdPASS;
@@ -4383,19 +4394,19 @@ TickType_t uxReturn;
 
 			switch( eAction )
 			{
-				case eSetBits	:
+				case eSetBits	:	// 代替事件组
 					pxTCB->ulNotifiedValue |= ulValue;
 					break;
 
-				case eIncrement	:
+				case eIncrement	:	// 代替计数信号量
 					( pxTCB->ulNotifiedValue )++;
 					break;
 
-				case eSetValueWithOverwrite	:
+				case eSetValueWithOverwrite	:	// 代替邮箱
 					pxTCB->ulNotifiedValue = ulValue;
 					break;
 
-				case eSetValueWithoutOverwrite :
+				case eSetValueWithoutOverwrite :	// 一定程度上代替队列
 					if( ucOriginalNotifyState != taskNOTIFICATION_RECEIVED )
 					{
 						pxTCB->ulNotifiedValue = ulValue;
@@ -4407,7 +4418,7 @@ TickType_t uxReturn;
 					}
 					break;
 
-				case eNoAction:
+				case eNoAction:	// 二值信号量 仅仅通知不使用消息值
 					/* The task is being notified without its notify value being
 					updated. */
 					break;

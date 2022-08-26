@@ -588,6 +588,14 @@ static void MuxSemHandleDemo(void)
 }
 static void xTaskNotifyDemo(void){
 
+	/*任务通知代替消息队列、事件组*/ 
+	// xTaskNotify()
+	//xTaskNotifyWait()
+	
+	/*任务通知代替二值信号量、计数信号量*/ 
+	// xTaskNotifyGive()
+	// ulTaskNotifyTake()
+	
 	BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
 	
 	/* 创建Receive1_Task任务 */
