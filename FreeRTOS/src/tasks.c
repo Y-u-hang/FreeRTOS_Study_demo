@@ -2853,7 +2853,8 @@ void vTaskPlaceOnEventList( List_t * const pxEventList, const TickType_t xTicksT
 	prvAddCurrentTaskToDelayedList( xTicksToWait, pdTRUE );
 }
 /*-----------------------------------------------------------*/
-
+// 当前的列表项 擦汇入到 事件列表 的尾部
+// 当前的任务添加到延时队列中
 void vTaskPlaceOnUnorderedEventList( List_t * pxEventList, const TickType_t xItemValue, const TickType_t xTicksToWait )
 {
 	configASSERT( pxEventList );
@@ -2865,6 +2866,7 @@ void vTaskPlaceOnUnorderedEventList( List_t * pxEventList, const TickType_t xIte
 	/* Store the item value in the event list item.  It is safe to access the
 	event list item here as interrupts won't access the event list item of a
 	task that is not in the Blocked state. */
+	// 将位图也就是value 8+ 24 的值更新到任务控制块的列表项的value中
 	listSET_LIST_ITEM_VALUE( &( pxCurrentTCB->xEventListItem ), xItemValue | taskEVENT_LIST_ITEM_VALUE_IN_USE );
 
 	/* Place the event list item of the TCB at the end of the appropriate event
@@ -2872,6 +2874,7 @@ void vTaskPlaceOnUnorderedEventList( List_t * pxEventList, const TickType_t xIte
 	event group implementation - and interrupts don't access event groups
 	directly (instead they access them indirectly by pending function calls to
 	the task level). */
+	// 将当前任务控制块的列表项添加到事件队列的尾部
 	vListInsertEnd( pxEventList, &( pxCurrentTCB->xEventListItem ) );
 
 	prvAddCurrentTaskToDelayedList( xTicksToWait, pdTRUE );
@@ -2978,7 +2981,7 @@ BaseType_t xReturn;
 	return xReturn;
 }
 /*-----------------------------------------------------------*/
-
+// 将阻塞的任务从事件列表中移除，并添加到就绪列表中
 BaseType_t xTaskRemoveFromUnorderedEventList( ListItem_t * pxEventListItem, const TickType_t xItemValue )
 {
 TCB_t *pxUnblockedTCB;
@@ -2989,21 +2992,22 @@ BaseType_t xReturn;
 	configASSERT( uxSchedulerSuspended != pdFALSE );
 
 	/* Store the new item value in the event list. */
-	listSET_LIST_ITEM_VALUE( pxEventListItem, xItemValue | taskEVENT_LIST_ITEM_VALUE_IN_USE );
+	listSET_LIST_ITEM_VALUE( pxEventListItem, xItemValue | taskEVENT_LIST_ITEM_VALUE_IN_USE ); // 最高位值1
 
 	/* Remove the event list form the event flag.  Interrupts do not access
 	event flags. */
 	pxUnblockedTCB = ( TCB_t * ) listGET_LIST_ITEM_OWNER( pxEventListItem );
 	configASSERT( pxUnblockedTCB );
-	( void ) uxListRemove( pxEventListItem );
+	( void ) uxListRemove( pxEventListItem );	// 将其从链表上删除
 
 	/* Remove the task from the delayed list and add it to the ready list.  The
 	scheduler is suspended so interrupts will not be accessing the ready
 	lists. */
+	// 从延迟列表中删除任务并将其添加到就绪列表中。调度程序被挂起，因此中断不会访问就绪列表
 	( void ) uxListRemove( &( pxUnblockedTCB->xStateListItem ) );
 	prvAddTaskToReadyList( pxUnblockedTCB );
 
-	if( pxUnblockedTCB->uxPriority > pxCurrentTCB->uxPriority )
+	if( pxUnblockedTCB->uxPriority > pxCurrentTCB->uxPriority )	// 判断当前任务的优先级和就绪任务的优先级 是否进行任务切换
 	{
 		/* Return true if the task removed from the event list has
 		a higher priority than the calling task.  This allows
@@ -4180,6 +4184,7 @@ TCB_t *pxTCB;
 #endif /* ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) ) */
 /*-----------------------------------------------------------*/
 
+// 获取事件列表项的项值 value
 TickType_t uxTaskResetEventItemValue( void )
 {
 TickType_t uxReturn;
@@ -4188,6 +4193,7 @@ TickType_t uxReturn;
 
 	/* Reset the event list item to its normal value - so it can be used with
 	queues and semaphores. */
+	// 将事件列表项重置为正常值？  更新任务优先级的值 不知道 
 	listSET_LIST_ITEM_VALUE( &( pxCurrentTCB->xEventListItem ), ( ( TickType_t ) configMAX_PRIORITIES - ( TickType_t ) pxCurrentTCB->uxPriority ) ); /*lint !e961 MISRA exception as the casts are only redundant for some ports. */
 
 	return uxReturn;
@@ -4720,7 +4726,7 @@ TickType_t uxReturn;
 #endif /* configUSE_TASK_NOTIFICATIONS */
 /*-----------------------------------------------------------*/
 
-
+// 当前任务添加到延时列表中等待 或者到 溢出延时列表
 static void prvAddCurrentTaskToDelayedList( TickType_t xTicksToWait, const BaseType_t xCanBlockIndefinitely )
 {
 TickType_t xTimeToWake;
@@ -4737,10 +4743,13 @@ const TickType_t xConstTickCount = xTickCount;
 
 	/* Remove the task from the ready list before adding it to the blocked list
 	as the same list item is used for both lists. */
+	// 把当前任务从就绪列表中删除 看后续就绪列表中是否有任务
+	// 就序列表中没有任务了
 	if( uxListRemove( &( pxCurrentTCB->xStateListItem ) ) == ( UBaseType_t ) 0 )
 	{
 		/* The current task must be in a ready list, so there is no need to
 		check, and the port reset macro can be called directly. */
+		// 如果当前任务的优先级就绪列表中没有任务了，进行标注这个优先级中不再有就绪任务了
 		portRESET_READY_PRIORITY( pxCurrentTCB->uxPriority, uxTopReadyPriority );
 	}
 	else
@@ -4749,12 +4758,14 @@ const TickType_t xConstTickCount = xTickCount;
 	}
 
 	#if ( INCLUDE_vTaskSuspend == 1 )
-	{
+	{	
+		// 设置的等待时间是 最大值 或者 可以一直等待阻塞
 		if( ( xTicksToWait == portMAX_DELAY ) && ( xCanBlockIndefinitely != pdFALSE ) )
 		{
 			/* Add the task to the suspended task list instead of a delayed task
 			list to ensure it is not woken by a timing event.  It will block
 			indefinitely. */
+			// 将当前任务块的列表项添加到挂起列表中
 			vListInsertEnd( &xSuspendedTaskList, &( pxCurrentTCB->xStateListItem ) );
 		}
 		else
@@ -4762,26 +4773,31 @@ const TickType_t xConstTickCount = xTickCount;
 			/* Calculate the time at which the task should be woken if the event
 			does not occur.  This may overflow but this doesn't matter, the
 			kernel will manage it correctly. */
+			// 计算阻塞时间
 			xTimeToWake = xConstTickCount + xTicksToWait;
 
 			/* The list item will be inserted in wake time order. */
+			// 标记事件阻塞时间
 			listSET_LIST_ITEM_VALUE( &( pxCurrentTCB->xStateListItem ), xTimeToWake );
-
+			// 超时  或着 溢出
 			if( xTimeToWake < xConstTickCount )
 			{
 				/* Wake time has overflowed.  Place this item in the overflow
 				list. */
+				// 进入 溢出延时列表 了
 				vListInsert( pxOverflowDelayedTaskList, &( pxCurrentTCB->xStateListItem ) );
 			}
 			else
 			{
 				/* The wake time has not overflowed, so the current block list
 				is used. */
+				// 还在阻塞中  等待延时列表计算等待中
 				vListInsert( pxDelayedTaskList, &( pxCurrentTCB->xStateListItem ) );
 
 				/* If the task entering the blocked state was placed at the
 				head of the list of blocked tasks then xNextTaskUnblockTime
 				needs to be updated too. */
+				// 唤醒时间小于下一个（任务）唤醒时间 更行唤醒时间
 				if( xTimeToWake < xNextTaskUnblockTime )
 				{
 					xNextTaskUnblockTime = xTimeToWake;

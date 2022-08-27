@@ -24,6 +24,7 @@
 #include "queue.h"
 #include "semphr.h"
 #include "limits.h"
+#include "event_groups.h"
 
 /******************************* 宏定义 ************************************/
 /*
@@ -35,6 +36,9 @@
  * 当我们在写应用程序的时候，可能需要用到一些宏定义。
  */
 #define  USE_CHAR  1  /* 测试字符串的时候配置为 1 ，测试变量配置为 0  */
+
+#define KEY1_EVENT  (0x01 << 0)//设置事件掩码的位0
+#define KEY2_EVENT  (0x01 << 1)//设置事件掩码的位1
 
 /**************************** 任务句柄 ********************************/
 /* 
@@ -89,6 +93,7 @@ QueueHandle_t Test_Queue =NULL;
 SemaphoreHandle_t BinarySem_Handle =NULL;	// 二值信号量
 SemaphoreHandle_t CountSem_Handle =NULL;	// 计数信号量
 SemaphoreHandle_t MuxSem_Handle =NULL;		// 互斥信号量
+static EventGroupHandle_t Event_Handle =NULL;
 
 
 
@@ -260,12 +265,16 @@ static void AppTaskCreate(void)
   BinarySem_Handle = xSemaphoreCreateBinary();	 
   if(NULL != BinarySem_Handle)
     printf("BinarySem_Handle二值信号量创建成功!\r\n");
+  /* 创建 Event_Handle */
+  Event_Handle = xEventGroupCreate();	 
+  if(NULL != Event_Handle)
+    printf("Event_Handle 事件创建成功!\r\n");
 
   xReturn = xTaskCreate((TaskFunction_t )LED_Task, /* 任务入口函数 */
                         (const char*    )"LED_Task",/* 任务名字 */
                         (uint16_t       )512,   /* 任务栈大小 */
                         (void*          )NULL,	/* 任务入口函数参数 */
-                        (UBaseType_t    )5,	    /* 任务的优先级 */
+                        (UBaseType_t    )9,	    /* 任务的优先级 */
                         (TaskHandle_t*  )&LED_Task_Handle);/* 任务控制块指针 */
   if(pdPASS == xReturn)
     printf("创建LED_Task任务成功!\r\n");
@@ -283,7 +292,7 @@ static void AppTaskCreate(void)
                         (const char*    )"KEY_Task",/* 任务名字 */
                         (uint16_t       )512,  /* 任务栈大小 */
                         (void*          )NULL,/* 任务入口函数参数 */
-                        (UBaseType_t    )2, /* 任务的优先级 */
+                        (UBaseType_t    )10, /* 任务的优先级 */
                         (TaskHandle_t*  )&KEY_Task_Handle);/* 任务控制块指针 */ 
   if(pdPASS == xReturn)
     printf("创建KEY_Task任务成功!\r\n");
@@ -343,7 +352,7 @@ static void AppTaskCreate(void)
 	xTaskNotifyDemo();
 	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
 	vTaskDelete(LED_Task_Handle2);
-	vTaskDelete(LED_Task_Handle);
+	// vTaskDelete(LED_Task_Handle);
   
   taskEXIT_CRITICAL();            //退出临界区
 }
@@ -356,18 +365,42 @@ static void AppTaskCreate(void)
   ********************************************************************/
 static void LED_Task(void* parameter)
 {	
-    while (1)
-    {
-        LED1_ON;
-        vTaskDelay(500);   /* 延时500个tick */
-        printf("LED_Task Running,LED1_ON\r\n");
-		printf("time : %d\r\n", xTaskGetTickCount());
-        
-        LED1_OFF;     
-        vTaskDelay(500);   /* 延时500个tick */		 		
-        printf("LED_Task Running,LED1_OFF\r\n");
-		printf("time : %d\r\n", xTaskGetTickCount());
-    }
+	EventBits_t r_event;  /* 定义一个事件接收变量 */
+	  /* 任务都是一个无限循环，不能返回 */
+	  while (1)
+		{
+		/*******************************************************************
+		 * 等待接收事件标志 
+		 * 
+		 * 如果xClearOnExit设置为pdTRUE，那么在xEventGroupWaitBits()返回之前，
+		 * 如果满足等待条件（如果函数返回的原因不是超时），那么在事件组中设置
+		 * 的uxBitsToWaitFor中的任何位都将被清除。 
+		 
+		 * 如果xClearOnExit设置为pdFALSE，
+		 * 则在调用xEventGroupWaitBits()时，不会更改事件组中设置的位。
+		 *
+		 * xWaitForAllBits如果xWaitForAllBits设置为pdTRUE，则当uxBitsToWaitFor中
+		 * 的所有位都设置或指定的块时间到期时，xEventGroupWaitBits()才返回。 
+		 * 如果xWaitForAllBits设置为pdFALSE，则当设置uxBitsToWaitFor中设置的任何
+		 * 一个位置1 或指定的块时间到期时，xEventGroupWaitBits()都会返回。 
+		 * 阻塞时间由xTicksToWait参数指定。		   
+		  *********************************************************/
+		r_event = xEventGroupWaitBits(Event_Handle,  /* 事件对象句柄 */
+									  KEY1_EVENT|KEY2_EVENT,/* 接收线程感兴趣的事件 */
+									  pdTRUE,	/* 退出时清除事件位 */
+									  pdTRUE,	/* 满足感兴趣的所有事件 */
+									  portMAX_DELAY);/* 指定超时事件,一直等 */
+							
+		if((r_event & (KEY1_EVENT|KEY2_EVENT)) == (KEY1_EVENT|KEY2_EVENT)) 
+		{
+		  /* 如果接收完成并且正确 */
+		  printf ( "KEY1与KEY2都按下\n");		
+		  LED1_TOGGLE;		 //LED1 反转
+		}
+		else
+		  printf ( "事件错误！\n");	
+	  }
+
 }
 
 static void LED_Task2(void* parameter)
@@ -397,17 +430,23 @@ static void KEY_Task(void* parameter)
   {
     if( Key_Scan(KEY1_GPIO_PORT,KEY1_GPIO_PIN) == KEY_ON )
     {/* K1 被按下 */
-      printf("挂起LED 任务！\r\n");
-      vTaskSuspend(LED_Task_Handle2);/* 挂起LED任务 */
-      printf("挂起LED任务成功！\r\n");
+      //printf("挂起LED 任务！\r\n");
+      //vTaskSuspend(LED_Task_Handle2);/* 挂起LED任务 */
+      //printf("挂起LED任务成功！\r\n");
+	  /* 触发一个事件1 */
+	  xEventGroupSetBits(Event_Handle,KEY1_EVENT);		  
+
 	  /*-----------------------------------------------------*/
 	  
     } 
     if( Key_Scan(KEY2_GPIO_PORT,KEY2_GPIO_PIN) == KEY_ON )
-    {/* K2 被按下 */
-      printf("恢复LED任务！\r\n");
-      vTaskResume(LED_Task_Handle2);/* 恢复LED任务！ */
-      printf("恢复LED任务成功！\r\n");
+    {	/* K2 被按下 */
+      	//printf("恢复LED任务！\r\n");
+      	//vTaskResume(LED_Task_Handle2);/* 恢复LED任务！ */
+      	//printf("恢复LED任务成功！\r\n");
+		/* 触发一个事件2 */
+		xEventGroupSetBits(Event_Handle,KEY2_EVENT);		
+
     }
     vTaskDelay(20);/* 延时20个tick */
   }
