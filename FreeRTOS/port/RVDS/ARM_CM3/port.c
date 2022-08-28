@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -270,9 +270,14 @@ __asm void vPortSVCHandler( void )
 	msr psp, r0				/* Restore the task stack pointer. */
 	isb
 	mov r0, #0
-	msr	basepri, r0
-	orr r14, #0xd
-	bx r14
+	msr	basepri, r0			// 将basepri 置0   打开所有中断
+	orr r14, #0xd			// svc 退出之前 将r14 或上1101 也就是 bit1 位置，
+							// 在硬件退出时使用进程堆栈指针PSP 进行线程模式
+							
+	bx r14					// 异常返回失败，这个时候栈中剩下的内容会自动加载到CPU寄存器
+							// XPSR PC R14 r12 R3~R0 同时PSP值也更新，指向任务栈的栈顶
+							// R14   BIT1： PSP 		MSP
+							// 		 BIT2：特权模式	用户模式
 }
 /*-----------------------------------------------------------*/
 
@@ -295,12 +300,12 @@ __asm void prvStartFirstTask( void )
 	/* Set the msp back to the start of the stack. */
 	msr msp, r0			//  将 __initial_sp的初始值写入 MSP 中
 	/* Globally enable interrupts. */
-	cpsie i
-	cpsie f
+	cpsie i				// 关中断
+	cpsie f				// 关异常
 	dsb
 	isb
 	/* Call SVC to start the first task. */
-	svc 0				 //    调用SVC中断  
+	svc 0				 //    调用SVC中断      SVC_Handler
 	nop
 	nop
 }
@@ -314,7 +319,8 @@ BaseType_t xPortStartScheduler( void )
 	#if( configASSERT_DEFINED == 1 )
 	{
 		volatile uint32_t ulOriginalPriority;
-		volatile uint8_t * const pucFirstUserPriorityRegister = ( uint8_t * ) ( portNVIC_IP_REGISTERS_OFFSET_16 + portFIRST_USER_INTERRUPT_NUMBER );
+		volatile uint8_t * const pucFirstUserPriorityRegister =
+			( uint8_t * ) ( portNVIC_IP_REGISTERS_OFFSET_16 + portFIRST_USER_INTERRUPT_NUMBER );	// 0xE000E3F0 + 16
 		volatile uint8_t ucMaxPriorityValue;
 
 		/* Determine the maximum priority from which ISR safe FreeRTOS API
@@ -323,21 +329,24 @@ BaseType_t xPortStartScheduler( void )
 		ensure interrupt entry is as fast and simple as possible.
 
 		Save the interrupt priority value that is about to be clobbered. */
+		// 将地址 0xE000E3F0 + 16 上的值保存到ulOriginalPriority中
 		ulOriginalPriority = *pucFirstUserPriorityRegister;
 
 		/* Determine the number of priority bits available.  First write to all
 		possible bits. */
+		// 将该地址上的值 赋值为FF
 		*pucFirstUserPriorityRegister = portMAX_8_BIT_VALUE;
 
 		/* Read the value back to see how many bits stuck. */
+		// 设置最大优先级 FF
 		ucMaxPriorityValue = *pucFirstUserPriorityRegister;
 
 		/* Use the same mask on the maximum system call priority. */
-		ucMaxSysCallPriority = configMAX_SYSCALL_INTERRUPT_PRIORITY & ucMaxPriorityValue;
+		ucMaxSysCallPriority = configMAX_SYSCALL_INTERRUPT_PRIORITY & ucMaxPriorityValue; // 80
 
 		/* Calculate the maximum acceptable priority group value for the number
 		of bits read back. */
-		ulMaxPRIGROUPValue = portMAX_PRIGROUP_BITS;
+		ulMaxPRIGROUPValue = portMAX_PRIGROUP_BITS;	// 7
 		while( ( ucMaxPriorityValue & portTOP_BIT_OF_BYTE ) == portTOP_BIT_OF_BYTE )
 		{
 			ulMaxPRIGROUPValue--;
@@ -356,6 +365,9 @@ BaseType_t xPortStartScheduler( void )
 	#endif /* conifgASSERT_DEFINED */
 
 	/* Make PendSV and SysTick the lowest priority interrupts. */
+	// 设置最低优先级 进入主栈模式 将这个两个中断 优先级置为最低
+	// 以方便硬件优先级 先跑
+	// 涉及到COTEX-M3内核的玩意儿了
 	portNVIC_SYSPRI2_REG |= portNVIC_PENDSV_PRI;
 	portNVIC_SYSPRI2_REG |= portNVIC_SYSTICK_PRI;
 
@@ -418,24 +430,31 @@ __asm void xPortPendSVHandler( void )
 
 	PRESERVE8
 
-	mrs r0, psp
-	isb
+	mrs r0, psp					// psp 指针进行保存到r0中
+	isb							// isb 将之前的指令全部执行完再来执行后续内容
 
-	ldr	r3, =pxCurrentTCB		/* Get the location of the current TCB. */
-	ldr	r2, [r3]
+	ldr	r3, =pxCurrentTCB		// pxCurrentTCB地址放入 r3中
+								// 获取当前任务块指针地址 也就是地址 也是任务控制块的堆栈栈顶指针
+								/* Get the location of the current TCB. */
+	ldr	r2, [r3]				// 将pxCurrentTCB内容放入到r2中
 
-	stmdb r0!, {r4-r11}			/* Save the remaining registers. */
-	str r0, [r2]				/* Save the new top of stack into the first member of the TCB. */
+	stmdb r0!, {r4-r11}			// 依次将CPU寄存器的 r4~r11的值存储到r0-4指向的地址中 r0内还是psp
+								// 也就是将r4~r11的信息保存再栈中
+	// psp 的上下文保存OK----------------------------------------------------------
+								/* Save the remaining registers. */
+	str r0, [r2]				// 将 R0的值 放到R2指向的地址上 也就是psp 丢到堆栈首地址上
+								/* Save the new top of stack into the first member of the TCB. */
 
-	stmdb sp!, {r3, r14}
-	mov r0, #configMAX_SYSCALL_INTERRUPT_PRIORITY
-	msr basepri, r0
-	dsb
-	isb
-	bl vTaskSwitchContext
+	stmdb sp!, {r3, r14}		// sp -4 依次放入 r3 r14 保存这两个玩意儿
+								// sp 是栈顶 ， r3 r14 就入栈了 
+	mov r0, #configMAX_SYSCALL_INTERRUPT_PRIORITY	// 
+	msr basepri, r0				// 屏蔽低于r0的优先级
+	dsb							// 数据同步隔离 仅当前面存储器访问操作执行完毕后，才执行后面的指令 --任何指令都要等待存储器访问操作
+	isb							// 指令同步隔离 清洗流水线，保证前面的都执行完毕 才执行后面操作
+	bl vTaskSwitchContext		
 	mov r0, #0
-	msr basepri, r0
-	ldmia sp!, {r3, r14}
+	msr basepri, r0				// 开中断
+	ldmia sp!, {r3, r14}		// 从SP中取出r3 r14 恢复
 
 	ldr r1, [r3]
 	ldr r0, [r1]				/* The first item in pxCurrentTCB is the task top of stack. */
