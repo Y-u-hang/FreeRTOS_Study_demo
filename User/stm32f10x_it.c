@@ -1,4 +1,4 @@
-/**
+﻿/**
   ******************************************************************************
   * @file    Project/STM32F10x_StdPeriph_Template/stm32f10x_it.c 
   * @author  MCD Application Team
@@ -148,6 +148,22 @@ void SysTick_Handler(void)
     #if (INCLUDE_xTaskGetSchedulerState  == 1 )
       }
     #endif  /* INCLUDE_xTaskGetSchedulerState */
+}
+
+void DEBUG_USART_IRQHandler(void)		// 中断服务函数 
+{
+  uint32_t ulReturn;
+  /* 进入临界段，临界段可以嵌套 */
+  ulReturn = taskENTER_CRITICAL_FROM_ISR();
+
+	if(USART_GetITStatus(DEBUG_USARTx,USART_IT_IDLE)!=RESET)
+	{		
+		Uart_DMA_Rx_Data();       /* 释放一个信号量，表示数据已接收 */
+		USART_ReceiveData(DEBUG_USARTx); /* 清除标志位 */
+	}	 
+  
+  /* 退出临界段 */
+  taskEXIT_CRITICAL_FROM_ISR( ulReturn );
 }
 
 

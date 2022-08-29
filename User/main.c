@@ -25,6 +25,9 @@
 #include "semphr.h"
 #include "limits.h"
 #include "event_groups.h"
+
+#include <string.h>
+
 // #include "timers.h"
 /******************************* 宏定义 ************************************/
 /*
@@ -39,6 +42,9 @@
 
 #define KEY1_EVENT  (0x01 << 0)//设置事件掩码的位0
 #define KEY2_EVENT  (0x01 << 1)//设置事件掩码的位1
+
+
+extern char Usart_Rx_Buf[USART_RBUFF_SIZE];
 
 /**************************** 任务句柄 ********************************/
 /* 
@@ -76,6 +82,7 @@ static TaskHandle_t HighPriority_Task_Handle = NULL;
 static TaskHandle_t Receive1_Task_Handle = NULL;/* Receive1_Task任务句柄 */
 static TaskHandle_t Receive2_Task_Handle = NULL;/* Receive2_Task任务句柄 */
 static TaskHandle_t Send_Task_Notify_Handle = NULL;/* Send_Task任务句柄 */
+static TaskHandle_t Debug_Dma_Handle = NULL;/* Send_Task任务句柄 */
 
 
 /********************************** 内核对象句柄 *********************************/
@@ -97,6 +104,9 @@ static EventGroupHandle_t Event_Handle =NULL;
 
 static TimerHandle_t Swtmr1_Handle =NULL;   /* 软件定时器句柄 */
 static TimerHandle_t Swtmr2_Handle =NULL;   /* 软件定时器句柄 */
+
+SemaphoreHandle_t BinarySem_Debug_Dma =NULL;	// 二值信号量
+
 
 
 /******************************* 全局变量声明 ************************************/
@@ -156,6 +166,7 @@ static void xTaskNotifyDemo(void);
 static void xTimerDemo(void);
 static void Swtmr1_Callback(void* parameter);
 static void Swtmr2_Callback(void* parameter);
+static void Debug_Dma(void* parameter);
 
 
 /**
@@ -234,7 +245,10 @@ static void BSP_Init(void)
 	
 	/* LED 初始化 */
 	LED_GPIO_Config();
-
+	
+	/* DMA初始化	*/
+	USARTx_DMA_Config();
+	
 	/* 串口初始化	*/
 	USART_Config();
 
@@ -254,6 +268,10 @@ static void AppTaskCreate(void)
   BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
 
   taskENTER_CRITICAL();           //进入临界区
+  /* 创建 BinarySem */
+  BinarySem_Debug_Dma = xSemaphoreCreateBinary();	 
+  if(NULL != BinarySem_Debug_Dma)
+    printf("BinarySem_Debug_Dma二值信号量创建成功!\r\n");
 
   /* 创建LED_Task任务 */
 //  静态创建任务
@@ -270,10 +288,12 @@ static void AppTaskCreate(void)
 //	else
 //		printf("LED_Task任务创建失败!\n");
 
+
   /* 创建 BinarySem */
   BinarySem_Handle = xSemaphoreCreateBinary();	 
   if(NULL != BinarySem_Handle)
     printf("BinarySem_Handle二值信号量创建成功!\r\n");
+  
   /* 创建 Event_Handle */
   Event_Handle = xEventGroupCreate();	 
   if(NULL != Event_Handle)
@@ -356,9 +376,20 @@ static void AppTaskCreate(void)
                         (TaskHandle_t*  )&Give_Task_Handle);/* 任务控制块指针 */ 
   	if(pdPASS == xReturn)
     	printf("创建Give_Task任务成功!\n\n");
-  
-	// MuxSemHandleDemo();
-	xTaskNotifyDemo();
+
+
+	/* 创建Give_Task任务 */
+	xReturn = xTaskCreate((TaskFunction_t )Debug_Dma,  /* 任务入口函数 */
+						  (const char*	  )"Debug_Dma",/* 任务名字 */
+						  (uint16_t 	  )512,  /* 任务栈大小 */
+						  (void*		  )NULL,/* 任务入口函数参数 */
+						  (UBaseType_t	  )5, /* 任务的优先级 */
+						  (TaskHandle_t*  )&Debug_Dma_Handle);/* 任务控制块指针 */ 
+	  if(pdPASS == xReturn)
+		  printf("创建Debug_Dma任务成功!\n\n");
+
+	 // MuxSemHandleDemo();
+	 xTaskNotifyDemo();
 	xTimerDemo();
 
 	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
@@ -1014,6 +1045,29 @@ static void xTimerDemo(void){
 	  xTimerStart(Swtmr2_Handle,0);   //开启周期定时器
 	} 
 
+}
+
+/**********************************************************************
+  * @ 函数名  ： LED_Task
+  * @ 功能说明： LED_Task任务主体
+  * @ 参数    ：   
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void Debug_Dma(void* parameter)
+{	
+	BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
+  while (1)
+  {
+    //获取二值信号量 xSemaphore,没获取到则一直等待
+		xReturn = xSemaphoreTake(BinarySem_Debug_Dma,/* 二值信号量句柄 */
+                              portMAX_DELAY); /* 等待时间 */
+    if(pdPASS == xReturn)
+    {
+      printf("收到数据:%s\n",Usart_Rx_Buf);
+      memset(Usart_Rx_Buf,0,USART_RBUFF_SIZE);/* 清零 */
+      LED2_TOGGLE;
+    }
+  }
 }
 
 // 静态创建你任务时需要	
