@@ -27,6 +27,8 @@
 #include "stm32f10x_it.h"
 #include "FreeRTOS.h"					//FreeRTOS  
 #include "task.h" 
+#include "bsp_TiMbase.h"
+
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
   */
@@ -164,6 +166,27 @@ void DEBUG_USART_IRQHandler(void)		// 中断服务函数
   
   /* 退出临界段 */
   taskEXIT_CRITICAL_FROM_ISR( ulReturn );
+}
+
+
+
+/******************************************************************************/
+/*                 STM32F10x Peripherals Interrupt Handlers                   */
+/*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */
+/*  available peripheral interrupt handler's name please refer to the startup */
+/*  file (startup_stm32f10x_xx.s).                                            */
+/******************************************************************************/
+
+/* 用于统计运行时间 */
+volatile uint32_t CPU_RunTime = 0UL;
+
+void  BASIC_TIM_IRQHandler (void)
+{
+	if ( TIM_GetITStatus( BASIC_TIM, TIM_IT_Update) != RESET ) 
+	{	
+    CPU_RunTime++;
+		TIM_ClearITPendingBit(BASIC_TIM , TIM_FLAG_Update);  		 
+	}		 	
 }
 
 
