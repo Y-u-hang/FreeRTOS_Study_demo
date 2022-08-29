@@ -719,13 +719,13 @@ static void xTaskNotifyDemo(void){
 	
 	/* 创建Send_Task任务 */
 	xReturn = xTaskCreate((TaskFunction_t )Send_Task_Notify,  /* 任务入口函数 */
-						  (const char*	  )"Send_Task",/* 任务名字 */
+						  (const char*	  )"Send_Task_Notify",/* 任务名字 */
 						  (uint16_t 	  )512,  /* 任务栈大小 */
 						  (void*		  )NULL,/* 任务入口函数参数 */
 						  (UBaseType_t	  )7, /* 任务的优先级 */
 						  (TaskHandle_t*  )&Send_Task_Notify_Handle);/* 任务控制块指针 */ 
 	if(pdPASS == xReturn)
-	  printf("创建Send_Task任务成功!\n\n");
+	  printf("创建Send_Task_Notify任务成功!\n\n");
 	
 
 }
