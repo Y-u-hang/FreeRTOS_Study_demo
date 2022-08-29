@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD, USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key</IncludePath>
+              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -592,6 +592,16 @@
               <FileName>bsp_key.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\User\Key\bsp_key.h</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_TiMbase.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\TimBase\bsp_TiMbase.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_TiMbase.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\TimBase\bsp_TiMbase.h</FilePath>
             </File>
           </Files>
         </Group>
