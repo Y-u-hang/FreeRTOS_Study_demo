@@ -25,7 +25,7 @@
 #include "semphr.h"
 #include "limits.h"
 #include "event_groups.h"
-
+// #include "timers.h"
 /******************************* 宏定义 ************************************/
 /*
  * 当我们在写应用程序的时候，可能需要用到一些宏定义。
@@ -95,6 +95,8 @@ SemaphoreHandle_t CountSem_Handle =NULL;	// 计数信号量
 SemaphoreHandle_t MuxSem_Handle =NULL;		// 互斥信号量
 static EventGroupHandle_t Event_Handle =NULL;
 
+static TimerHandle_t Swtmr1_Handle =NULL;   /* 软件定时器句柄 */
+static TimerHandle_t Swtmr2_Handle =NULL;   /* 软件定时器句柄 */
 
 
 /******************************* 全局变量声明 ************************************/
@@ -123,6 +125,9 @@ static EventGroupHandle_t Event_Handle =NULL;
 ///* 定时器任务控制块 */
 //static StaticTask_t Timer_Task_TCB;
 
+static uint32_t TmrCb_Count1 = 0; /* 记录软件定时器1回调函数执行次数 */
+static uint32_t TmrCb_Count2 = 0; /* 记录软件定时器2回调函数执行次数 */
+
 /*
 *************************************************************************
 *                             函数声明
@@ -147,6 +152,10 @@ static void Receive2_Task(void* pvParameters);/* Receive2_Task任务实现 */
 static void Send_Task_Notify(void* pvParameters);/* Send_Task任务实现 */
 
 static void xTaskNotifyDemo(void);
+
+static void xTimerDemo(void);
+static void Swtmr1_Callback(void* parameter);
+static void Swtmr2_Callback(void* parameter);
 
 
 /**
@@ -350,6 +359,8 @@ static void AppTaskCreate(void)
   
 	// MuxSemHandleDemo();
 	xTaskNotifyDemo();
+	xTimerDemo();
+
 	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
 	vTaskDelete(LED_Task_Handle2);
 	// vTaskDelete(LED_Task_Handle);
@@ -911,6 +922,98 @@ static void Send_Task_Notify(void* parameter)
     }
     vTaskDelay(20);
   }
+}
+
+
+
+/***********************************************************************
+  * @ 函数名  ： Swtmr1_Callback
+  * @ 功能说明： 软件定时器1 回调函数，打印回调函数信息&当前系统时间
+  *              软件定时器请不要调用阻塞函数，也不要进行死循环，应快进快出
+  * @ 参数    ： 无  
+  * @ 返回值  ： 无
+  **********************************************************************/
+static void Swtmr1_Callback(void* parameter)
+{		
+  TickType_t tick_num1;
+
+  TmrCb_Count1++;						/* 每回调一次加一 */
+
+  tick_num1 = xTaskGetTickCount();	/* 获取滴答定时器的计数值 */
+  
+  LED1_TOGGLE;
+  
+  printf("Swtmr1_Callback函数执行 %d 次\n", TmrCb_Count1);
+  printf("滴答定时器数值=%d\n", tick_num1);
+}
+
+/***********************************************************************
+  * @ 函数名  ： Swtmr2_Callback
+  * @ 功能说明： 软件定时器2 回调函数，打印回调函数信息&当前系统时间
+  *              软件定时器请不要调用阻塞函数，也不要进行死循环，应快进快出
+  * @ 参数    ： 无  
+  * @ 返回值  ： 无
+  **********************************************************************/
+static void Swtmr2_Callback(void* parameter)
+{	
+  TickType_t tick_num2;
+
+  TmrCb_Count2++;						/* 每回调一次加一 */
+
+  tick_num2 = xTaskGetTickCount();	/* 获取滴答定时器的计数值 */
+
+  printf("Swtmr2_Callback函数执行 %d 次\n", TmrCb_Count2);
+  printf("滴答定时器数值=%d\n", tick_num2);
+}
+
+static void xTimerDemo(void){
+	/************************************************************************************
+	 * 创建软件周期定时器
+	 * 函数原型
+	 * TimerHandle_t xTimerCreate(	  const char * const pcTimerName,
+								  const TickType_t xTimerPeriodInTicks,
+								  const UBaseType_t uxAutoReload,
+								  void * const pvTimerID,
+				  TimerCallbackFunction_t pxCallbackFunction )
+	  * @uxAutoReload : pdTRUE为周期模式，pdFALS为单次模式
+	 * 单次定时器，周期(1000个时钟节拍)，周期模式
+	*************************************************************************************/
+
+	if(Swtmr1_Handle != NULL)						   
+	{
+	  /***********************************************************************************
+	   * xTicksToWait:如果在调用xTimerStart()时队列已满，则以tick为单位指定调用任务应保持
+	   * 在Blocked(阻塞)状态以等待start命令成功发送到timer命令队列的时间。 
+	   * 如果在启动调度程序之前调用xTimerStart()，则忽略xTicksToWait。在这里设置等待时间为0.
+	   **********************************************************************************/
+	  xTimerStart(Swtmr1_Handle,0);   //开启周期定时器
+	}							 
+	/************************************************************************************
+	 * 创建软件周期定时器
+	 * 函数原型
+	 * TimerHandle_t xTimerCreate(	  const char * const pcTimerName,
+								  const TickType_t xTimerPeriodInTicks,
+								  const UBaseType_t uxAutoReload,
+								  void * const pvTimerID,
+				  TimerCallbackFunction_t pxCallbackFunction )
+	  * @uxAutoReload : pdTRUE为周期模式，pdFALS为单次模式
+	 * 单次定时器，周期(5000个时钟节拍)，单次模式
+	 *************************************************************************************/
+	  Swtmr2_Handle=xTimerCreate((const char*		  )"OneShotTimer",
+							   (TickType_t			  )5000,/* 定时器周期 5000(tick) */
+							   (UBaseType_t 		  )pdFALSE,/* 单次模式 */
+							   (void*					)2,/* 为每个计时器分配一个索引的唯一ID */
+							   (TimerCallbackFunction_t)Swtmr2_Callback); 
+	if(Swtmr2_Handle != NULL)
+	{
+	 /***********************************************************************************
+	 * xTicksToWait:如果在调用xTimerStart()时队列已满，则以tick为单位指定调用任务应保持
+	 * 在Blocked(阻塞)状态以等待start命令成功发送到timer命令队列的时间。 
+	 * 如果在启动调度程序之前调用xTimerStart()，则忽略xTicksToWait。在这里设置等待时间为0.
+	 **********************************************************************************/   
+	  xTimerStart(Swtmr2_Handle,0);   //开启周期定时器
+	} 
+
 }
 
 // 静态创建你任务时需要	

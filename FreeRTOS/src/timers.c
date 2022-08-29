@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -414,7 +414,11 @@ static void prvInitialiseNewTimer(	const char * const pcTimerName,
 }
 /*-----------------------------------------------------------*/
 
-BaseType_t xTimerGenericCommand( TimerHandle_t xTimer, const BaseType_t xCommandID, const TickType_t xOptionalValue, BaseType_t * const pxHigherPriorityTaskWoken, const TickType_t xTicksToWait )
+BaseType_t xTimerGenericCommand( TimerHandle_t xTimer,									
+										const BaseType_t xCommandID,					// 定时器控制命令
+										const TickType_t xOptionalValue,				// 
+										BaseType_t * const pxHigherPriorityTaskWoken,
+										const TickType_t xTicksToWait )
 {
 BaseType_t xReturn = pdFAIL;
 DaemonTaskMessage_t xMessage;
@@ -559,10 +563,14 @@ BaseType_t xListWasEmpty;
 	{
 		/* Query the timers list to see if it contains any timers, and if so,
 		obtain the time at which the next timer will expire. */
+
+		// 去定时器列表中获取下一个定时器
 		xNextExpireTime = prvGetNextExpireTime( &xListWasEmpty );
 
 		/* If a timer has expired, process it.  Otherwise, block this task
 		until either a timer does expire, or a command is received. */
+
+		//
 		prvProcessTimerOrBlockTask( xNextExpireTime, xListWasEmpty );
 
 		/* Empty the command queue. */
@@ -583,6 +591,7 @@ BaseType_t xTimerListsWereSwitched;
 		then don't process this timer as any timers that remained in the list
 		when the lists were switched will have been processed within the
 		prvSampleTimeNow() function. */
+		// 
 		xTimeNow = prvSampleTimeNow( &xTimerListsWereSwitched );
 		if( xTimerListsWereSwitched == pdFALSE )
 		{

@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -93,6 +93,7 @@ be used solely through the macros that make up the public software timer API,
 as defined below.  The commands that are sent from interrupts must use the
 highest numbers as tmrFIRST_FROM_ISR_COMMAND is used to determine if the task
 or interrupt version of the queue send function should be used. */
+// 定时器的command ID
 #define tmrCOMMAND_EXECUTE_CALLBACK_FROM_ISR 	( ( BaseType_t ) -2 )
 #define tmrCOMMAND_EXECUTE_CALLBACK				( ( BaseType_t ) -1 )
 #define tmrCOMMAND_START_DONT_TRACE				( ( BaseType_t ) 0 )
