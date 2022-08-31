@@ -1,4 +1,4 @@
-/**
+﻿/**
   ******************************************************************************
   * @file    stm32f10x_dma.h
   * @author  MCD Application Team
@@ -49,38 +49,60 @@
 
 typedef struct
 {
-  uint32_t DMA_PeripheralBaseAddr; /*!< Specifies the peripheral base address for DMAy Channelx. */
+  uint32_t DMA_PeripheralBaseAddr; 	// 外设地址，设定 DMA_CPAR 寄存器的值；一般设置为外设的数据，寄存器地址
+  									// 如果是存储器到存储器模式则设置为其中一个存储器地址。
+  									/*!< Specifies the peripheral base address for DMAy Channelx. */
 
-  uint32_t DMA_MemoryBaseAddr;     /*!< Specifies the memory base address for DMAy Channelx. */
+  uint32_t DMA_MemoryBaseAddr;     	// 存储器地址，设定 DMA_CMAR 寄存器值；一般设置为我们自定义存储区的首地址
+  									/*!< Specifies the memory base address for DMAy Channelx. */
 
-  uint32_t DMA_DIR;                /*!< Specifies if the peripheral is the source or destination.
+  uint32_t DMA_DIR;                	// 传输方向选择，可选外设到存储器、存储器到外设
+  									/*!< Specifies if the peripheral is the source or destination.
                                         This parameter can be a value of @ref DMA_data_transfer_direction */
 
-  uint32_t DMA_BufferSize;         /*!< Specifies the buffer size, in data unit, of the specified Channel. 
+  uint32_t DMA_BufferSize;         	// 设定待传输数据数目，初始化设定 DMA_CNDTR 寄存器的值
+  									/*!< Specifies the buffer size, in data unit, of the specified Channel. 
                                         The data unit is equal to the configuration set in DMA_PeripheralDataSize
                                         or DMA_MemoryDataSize members depending in the transfer direction. */
 
-  uint32_t DMA_PeripheralInc;      /*!< Specifies whether the Peripheral address register is incremented or not.
+  uint32_t DMA_PeripheralInc;      	// 如果配置为 DMA_PeripheralInc_Enable，使能外设地址自动递增功能，它
+									// 设定 DMA_CCR 寄存器的 PINC 位的值；一般外设都是只有一个数据寄存器
+									// 所以一般不会使能该位									
+									/*!< Specifies whether the Peripheral address register is incremented or not.
                                         This parameter can be a value of @ref DMA_peripheral_incremented_mode */
 
-  uint32_t DMA_MemoryInc;          /*!< Specifies whether the memory address register is incremented or not.
+  uint32_t DMA_MemoryInc;          	// 如果配置为 DMA_MemoryInc_Enable，使能存储器地址自动递增功能，它
+									// 设定 DMA_CCR 寄存器的 MINC 位的值；我们自定义的存储区一般都是存放多个数据的，所以要使能存
+									/*!< Specifies whether the memory address register is incremented or not.
                                         This parameter can be a value of @ref DMA_memory_incremented_mode */
 
-  uint32_t DMA_PeripheralDataSize; /*!< Specifies the Peripheral data width.
+  uint32_t DMA_PeripheralDataSize; 	// 外设数据宽度，可选字节 (8 位)、半字 (16 位) 和字 (32 位)，它设定
+									// DMA_CCR 寄存器的 PSIZE[1:0] 位的值
+									/*!< Specifies the Peripheral data width.
                                         This parameter can be a value of @ref DMA_peripheral_data_size */
 
-  uint32_t DMA_MemoryDataSize;     /*!< Specifies the Memory data width.
+  uint32_t DMA_MemoryDataSize;     	// 存储器数据宽度，可选字节 (8 位)、半字 (16 位) 和字 (32 位)，它设定
+									// DMA_CCR 寄存器的 MSIZE[1:0] 位的值。当外设和存储器之间传数据时，两边的数据宽度应该
+									// 设置为一致大小。
+									/*!< Specifies the Memory data width.
                                         This parameter can be a value of @ref DMA_memory_data_size */
 
-  uint32_t DMA_Mode;               /*!< Specifies the operation mode of the DMAy Channelx.
+  uint32_t DMA_Mode;               	// MA 传输模式选择，可选一次传输或者循环传输，它设定 DMA_CCR 寄存器的
+									// CIRC 位的值。
+									/*!< Specifies the operation mode of the DMAy Channelx.
                                         This parameter can be a value of @ref DMA_circular_normal_mode.
                                         @note: The circular buffer mode cannot be used if the memory-to-memory
                                               data transfer is configured on the selected Channel */
 
-  uint32_t DMA_Priority;           /*!< Specifies the software priority for the DMAy Channelx.
+  uint32_t DMA_Priority;           // 软件设置通道的优先级，有 4 个可选优先级分别为非常高、高、中和低，它设
+									//定 DMA_CCR 寄存器的 PL[1:0] 位的值。 DMA 通道优先级只有在多个 DMA 通道同时使用时才
+									//有意义，如果是单个通道，优先级可以随便设置。
+									/*!< Specifies the software priority for the DMAy Channelx.
                                         This parameter can be a value of @ref DMA_priority_level */
 
-  uint32_t DMA_M2M;                /*!< Specifies if the DMAy Channelx will be used in memory-to-memory transfer.
+  uint32_t DMA_M2M;                //存储器到存储器模式，使用存储器到存储器时用到，设定 DMA_CCR 的位 14
+									//MEN2MEN 即可启动存储器到存储器模式
+										/*!< Specifies if the DMAy Channelx will be used in memory-to-memory transfer.
                                         This parameter can be a value of @ref DMA_memory_to_memory */
 }DMA_InitTypeDef;
 
