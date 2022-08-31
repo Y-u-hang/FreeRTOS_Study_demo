@@ -67,6 +67,13 @@ typedef enum
 /** 
   * @brief  Configuration Mode enumeration  
   */
+// 浮空输入，IO的电平状态是不确定的，完全由外部输入决定；
+// 上拉输入，IO内部上拉电阻输入  ==悬空时，处于高电平状态
+// 下拉输入，IO内部下拉电阻输入 ==悬空时，处于低电平状态
+// 模拟输入，应用ADC模拟输入，或者低功耗下省电
+
+// 开漏输出，输出为1 时，需要外部电路上拉；输出为0时，外部拉低或者不管，该种方式可读可写
+// 推挽输出，IO输出0-接GND， IO输出1 -接VCC，读输入值是未知的
 
 typedef enum
 { GPIO_Mode_AIN = 0x0,           // 模拟输入
@@ -75,8 +82,8 @@ typedef enum
   GPIO_Mode_IPU = 0x48,          // 上拉输入
   GPIO_Mode_Out_OD = 0x14,       // 开漏输出
   GPIO_Mode_Out_PP = 0x10,       // 推挽输出
-  GPIO_Mode_AF_OD = 0x1C,        // 复用开漏输出
-  GPIO_Mode_AF_PP = 0x18         // 复用推挽输出
+  GPIO_Mode_AF_OD = 0x1C,        // 复用开漏输出	（TX1,MOSI,MISO.SCK.SS）
+  GPIO_Mode_AF_PP = 0x18         // 复用推挽输出	（I2C的SCL,SDA）
 }GPIOMode_TypeDef;
 
 #define IS_GPIO_MODE(MODE) (((MODE) == GPIO_Mode_AIN) || ((MODE) == GPIO_Mode_IN_FLOATING) || \
