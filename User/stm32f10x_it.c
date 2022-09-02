@@ -190,6 +190,19 @@ void  BASIC_TIM_IRQHandler (void)
 }
 
 
+/*
+ * 函数名：SDIO_IRQHandler
+ * 描述  ：在SDIO_ITConfig(）这个函数开启了sdio中断	，
+ 			数据传输结束时产生中断
+ * 输入  ：无		 
+ * 输出  ：无
+ */
+void SDIO_IRQHandler(void) 
+{
+  /* Process All SDIO Interrupt Sources */
+  SD_ProcessIRQSrc();
+}
+
 /******************************************************************************/
 /*                 STM32F10x Peripherals Interrupt Handlers                   */
 /*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */

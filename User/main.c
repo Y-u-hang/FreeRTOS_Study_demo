@@ -27,6 +27,8 @@
 #include "event_groups.h"
 #include "bsp_TiMbase.h"
 #include <string.h>
+#include "sdio/sdio_test.h"
+#include "sdio/bsp_sdio_sdcard.h"
 
 // #include "timers.h"
 /******************************* 宏定义 ************************************/
@@ -86,6 +88,8 @@ static TaskHandle_t Debug_Dma_Handle = NULL;/* Send_Task任务句柄 */
 
 static TaskHandle_t CPU_Task_Handle = NULL;/* Send_Task任务句柄 */
 
+
+static TaskHandle_t xSDcard_Task_Handle = NULL;/* xSDcard_Task任务句柄 */
 
 /********************************** 内核对象句柄 *********************************/
 /*
@@ -171,6 +175,9 @@ static void Swtmr2_Callback(void* parameter);
 static void Debug_Dma(void* parameter);
 
 static void CPU_Task(void* parameter);
+static void xSDcardDemo(void);
+static void xSDcard_Task(void);
+
 void CPU_Percent(void);
 
 
@@ -261,6 +268,8 @@ static void BSP_Init(void)
 
 	/* 基本定时器初始化   */
 	  BASIC_TIM_Init();
+	
+
 
 	//LED1_ON;
 	//printf(" yuahng usart init ok!\n");
@@ -392,7 +401,7 @@ static void AppTaskCreate(void)
 						  (const char*	  )"Debug_Dma",/* 任务名字 */
 						  (uint16_t 	  )512,  /* 任务栈大小 */
 						  (void*		  )NULL,/* 任务入口函数参数 */
-						  (UBaseType_t	  )5, /* 任务的优先级 */
+						  (UBaseType_t	  )8, /* 任务的优先级 */
 						  (TaskHandle_t*  )&Debug_Dma_Handle);/* 任务控制块指针 */ 
 	  if(pdPASS == xReturn)
 		  printf("创建Debug_Dma任务成功!\n\n");
@@ -409,11 +418,12 @@ static void AppTaskCreate(void)
 	 // MuxSemHandleDemo();
 	 xTaskNotifyDemo();
 	xTimerDemo();
-
+	xSDcardDemo();
 	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
 	vTaskDelete(LED_Task_Handle2);
 	// vTaskDelete(LED_Task_Handle);
-  
+	
+  	vTaskDelete(xSDcard_Task_Handle);
   taskEXIT_CRITICAL();            //退出临界区
 }
 
@@ -1142,6 +1152,33 @@ static void CPU_Task(void* parameter)
   }
 }
 
+static void xSDcardDemo(void){
+	BaseType_t xReturn = pdPASS;
+		SD_Test();
+
+		/* 创建LowPriority_Task任务 */
+		xReturn = xTaskCreate((TaskFunction_t )xSDcard_Task, /* 任务入口函数 */
+								(const char*	)"xSDcard_Task",/* 任务名字 */
+								(uint16_t		)512,	/* 任务栈大小 */
+								(void*			)NULL,	/* 任务入口函数参数 */
+								(UBaseType_t	)2, 	/* 任务的优先级 */
+								(TaskHandle_t*	)&xSDcard_Task_Handle);/* 任务控制块指针 */
+		if(pdPASS == xReturn)
+			printf("创建xSDcard_Task任务成功!\r\n");
+
+
+
+
+}
+
+static void xSDcard_Task(void){
+	while(1){
+	printf("xSDcard_Task\n");
+
+	}
+
+
+}
 // 静态创建你任务时需要	
 
 ///**

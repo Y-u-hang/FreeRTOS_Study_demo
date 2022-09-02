@@ -1,4 +1,4 @@
-/**
+﻿/**
   ******************************************************************************
   * @file    stm32f10x_sdio.c
   * @author  MCD Application Team
@@ -352,7 +352,8 @@ void SDIO_SendCommand(SDIO_CmdInitTypeDef *SDIO_CmdInitStruct)
   assert_param(IS_SDIO_RESPONSE(SDIO_CmdInitStruct->SDIO_Response));
   assert_param(IS_SDIO_WAIT(SDIO_CmdInitStruct->SDIO_Wait));
   assert_param(IS_SDIO_CPSM(SDIO_CmdInitStruct->SDIO_CPSM));
-  
+  if(SDIO_CmdInitStruct->SDIO_CmdIndex != 16 && SDIO_CmdInitStruct->SDIO_CmdIndex != 18)
+  printf("SDIO_CmdIndex %d\n",SDIO_CmdInitStruct->SDIO_CmdIndex);
 /*---------------------------- SDIO ARG Configuration ------------------------*/
   /* Set the SDIO Argument value */
   SDIO->ARG = SDIO_CmdInitStruct->SDIO_Argument;
