@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------------------/
+﻿/*---------------------------------------------------------------------------/
 /  FatFs - FAT file system module include R0.11a    (C)ChaN, 2015
 /----------------------------------------------------------------------------/
 / FatFs module is a free software that opened under license policy of
@@ -32,19 +32,19 @@ extern "C" {
 
 
 /* Definitions of volume management */
-
-#if _MULTI_PARTITION		/* Multiple partition configuration */
+// 分区的配置
+#if _MULTI_PARTITION		// 多分区的配置 /* Multiple partition configuration */
 typedef struct {
 	BYTE pd;	/* Physical drive number */
 	BYTE pt;	/* Partition: 0:Auto detect, 1-4:Forced partition) */
 } PARTITION;
-extern PARTITION VolToPart[];	/* Volume - Partition resolution table */
+extern PARTITION VolToPart[];	// 声明多分区的变量/* Volume - Partition resolution table */
 #define LD2PD(vol) (VolToPart[vol].pd)	/* Get physical drive number */
 #define LD2PT(vol) (VolToPart[vol].pt)	/* Get partition index */
 
 #else							/* Single partition configuration */
-#define LD2PD(vol) (BYTE)(vol)	/* Each logical drive is bound to the same physical drive number */
-#define LD2PT(vol) 0			/* Find first valid partition or in SFD */
+#define LD2PD(vol) (BYTE)(vol)	/* 逻辑驱动和物理驱动一致Each logical drive is bound to the same physical drive number */
+#define LD2PT(vol) 0			/* 挂载第一个有效分区Find first valid partition or in SFD */
 
 #endif
 
@@ -78,52 +78,59 @@ typedef char TCHAR;
 typedef struct {
 	BYTE	fs_type;		/* FAT sub-type (0:Not mounted) */
 	BYTE	drv;			/* Physical drive number */
-	BYTE	csize;			/* Sectors per cluster (1,2,4...128) */
-	BYTE	n_fats;			/* Number of FAT copies (1 or 2) */
-	BYTE	wflag;			/* win[] flag (b0:dirty) */
+	BYTE	csize;			// 每个簇的扇区数/* Sectors per cluster (1,2,4...128) */
+	BYTE	n_fats;			// FAT表的个数/* Number of FAT copies (1 or 2) */
+	BYTE	wflag;			// 当前存储在win[]中的内容是否修改过 1 可以修改
+							// 文件改动标志 脏块 
+							/* win[] flag (b0:dirty) */
 	BYTE	fsi_flag;		/* FSINFO flags (b7:disabled, b0:dirty) */
-	WORD	id;				/* File system mount ID */
-	WORD	n_rootdir;		/* Number of root directory entries (FAT12/16) */
+	WORD	id;				// mount  ID /* File system mount ID */
+	WORD	n_rootdir;		// 根目录 目录项数 /* Number of root directory entries (FAT12/16) */
 #if _MAX_SS != _MIN_SS
-	WORD	ssize;			/* Bytes per sector (512, 1024, 2048 or 4096) */
+	WORD	ssize;			// 扇区大小 /* Bytes per sector (512, 1024, 2048 or 4096) */
 #endif
 #if _FS_REENTRANT
 	_SYNC_t	sobj;			/* Identifier of sync object */
 #endif
-#if !_FS_READONLY
+#if !_FS_READONLY			// 文件可写
 	DWORD	last_clust;		/* Last allocated cluster */
 	DWORD	free_clust;		/* Number of free clusters */
 #endif
-#if _FS_RPATH
+#if _FS_RPATH				// 相对路径
 	DWORD	cdir;			/* Current directory start cluster (0:root) */
 #endif
-	DWORD	n_fatent;		/* Number of FAT entries, = number of clusters + 2 */
-	DWORD	fsize;			/* Sectors per FAT */
+	DWORD	n_fatent;		// ？？/* Number of FAT entries, = number of clusters + 2 */
+	DWORD	fsize;			// FAT表所占据的 扇区数 /* Sectors per FAT */
 	DWORD	volbase;		/* Volume start sector */
-	DWORD	fatbase;		/* FAT start sector */
-	DWORD	dirbase;		/* Root directory start sector (FAT32:Cluster#) */
-	DWORD	database;		/* Data start sector */
-	DWORD	winsect;		/* Current sector appearing in the win[] */
-	BYTE	win[_MAX_SS];	/* Disk access window for Directory, FAT (and file data at tiny cfg) */
-} FATFS;
+	DWORD	fatbase;		// FAT表的开始扇区/* FAT start sector */
+	DWORD	dirbase;		// 根目录开始扇区/* Root directory start sector (FAT32:Cluster#) */
+	DWORD	database;		// 数据区开始扇区/* Data start sector */
+	DWORD	winsect;		// 目前扇区在哪一个分区里面 个人理解/* Current sector appearing in the win[] */
+	BYTE	win[_MAX_SS];	// 扇区的缓冲区 /* Disk access window for Directory, FAT (and file data at tiny cfg) */
+} FATFS; // 保存了SD卡和文件系统的信息，主要是记录了DBR中的信息
 
 
 
 /* File object structure (FIL) */
 
 typedef struct {
-	FATFS*	fs;				/* Pointer to the related file system object (**do not change order**) */
+	FATFS*	fs;				// 
+							/* Pointer to the related file system object (**do not change order**) */
 	WORD	id;				/* Owner file system mount ID (**do not change order**) */
 	BYTE	flag;			/* Status flags */
 	BYTE	err;			/* Abort flag (error code) */
 	DWORD	fptr;			/* File read/write pointer (Zeroed on file open) */
 	DWORD	fsize;			/* File size */
-	DWORD	sclust;			/* File start cluster (0:no cluster chain, always 0 when fsize is 0) */
-	DWORD	clust;			/* Current cluster of fpter (not valid when fprt is 0) */
-	DWORD	dsect;			/* Sector number appearing in buf[] (0:invalid) */
+	DWORD	sclust;			// 文件开始簇
+							/* File start cluster (0:no cluster chain, always 0 when fsize is 0) */
+	DWORD	clust;			// 当前簇的读写指针
+							/* Current cluster of fpter (not valid when fprt is 0) */
+	DWORD	dsect;			// buf[] 中的 扇区号 /* Sector number appearing in buf[] (0:invalid) */
 #if !_FS_READONLY
-	DWORD	dir_sect;		/* Sector number containing the directory entry */
-	BYTE*	dir_ptr;		/* Pointer to the directory entry in the win[] */
+	DWORD	dir_sect;		// 文件对应的目录项所在扇区号
+							/* Sector number containing the directory entry */
+	BYTE*	dir_ptr;		// 目录项在win[]中的入口地址
+							/* Pointer to the directory entry in the win[] */
 #endif
 #if _USE_FASTSEEK
 	DWORD*	cltbl;			/* Pointer to the cluster link map table (Nulled on file open) */
@@ -134,19 +141,21 @@ typedef struct {
 #if !_FS_TINY
 	BYTE	buf[_MAX_SS];	/* File private data read/write window */
 #endif
-} FIL;
+} FIL;	//记录普通文件（不是目录文件）的详细信息，比如文件对应的目录项位置，文件起始簇号，文件指针，文件大小等。
 
 
 
 /* Directory object structure (DIR) */
-
 typedef struct {
 	FATFS*	fs;				/* Pointer to the owner file system object (**do not change order**) */
 	WORD	id;				/* Owner file system mount ID (**do not change order**) */
-	WORD	index;			/* Current read/write index number */
+	WORD	index;			// 当前读写索引
+							/* Current read/write index number */
 	DWORD	sclust;			/* Table start cluster (0:Root dir) */
-	DWORD	clust;			/* Current cluster */
-	DWORD	sect;			/* Current sector */
+	DWORD	clust;			// 当前簇
+							/* Current cluster */
+	DWORD	sect;			// 当前扇区
+							/* Current sector */
 	BYTE*	dir;			/* Pointer to the current SFN entry in the win[] */
 	BYTE*	fn;				/* Pointer to the SFN (in/out) {file[8],ext[3],status[1]} */
 #if _FS_LOCK
@@ -160,6 +169,7 @@ typedef struct {
 	const TCHAR*	pat;	/* Pointer to the name matching pattern */
 #endif
 } DIR;
+// 作为目录项的指针，既可以用于记录一个特定文件在目录中的位置，又可以用于记录在目录中当前目录项指针的位置（类似与文件指针）
 
 
 

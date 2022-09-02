@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------------------/
+﻿/*---------------------------------------------------------------------------/
 /  FatFs - FAT file system module configuration file  R0.11a (C)ChaN, 2015
 /---------------------------------------------------------------------------*/
 
@@ -226,7 +226,7 @@
 /      lock feature is independent of re-entrancy. */
 
 
-#define _FS_REENTRANT	0
+#define _FS_REENTRANT	0		// 文件系统是否可以重入
 #define _FS_TIMEOUT		1000
 #define	_SYNC_t			HANDLE
 /* The _FS_REENTRANT option switches the re-entrancy (thread safe) of the FatFs

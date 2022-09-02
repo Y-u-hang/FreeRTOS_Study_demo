@@ -1,4 +1,4 @@
-/*----------------------------------------------------------------------------/
+﻿/*----------------------------------------------------------------------------/
 /  FatFs - FAT file system module  R0.11a                (C)ChaN, 2015        /
 /-----------------------------------------------------------------------------/
 / FatFs module is a free software that opened under license policy of
@@ -694,6 +694,7 @@ void clear_lock (	/* Clear lock entries of the volume */
 
 /*-----------------------------------------------------------------------*/
 /* Move/Flush disk access window in the file system object               */
+// 文件系统对象中的移动/刷新磁盘访问窗口
 /*-----------------------------------------------------------------------*/
 #if !_FS_READONLY
 static
@@ -724,7 +725,18 @@ FRESULT sync_window (	/* FR_OK:succeeded, !=0:error */
 }
 #endif
 
+/*
+@函数功能：win[]操作函数（DBR、FAT表、目录项）
+　　　　　　① 读取新的扇区内容到临时缓冲区win[]
+            ② 同步win[]中的内容到磁盘
+       注意：
+             <1> 如果读取新的扇区号就是现在存储在win[]中的扇区号，就什么也不操作
+             <2> 如果不同，则根据情况同步win[]到磁盘中，并且将新扇区中的内容读取到win[]中
+       　　  	 <3> 如果sector为0，则函数功能变为同步win[]到磁盘中，不会读取0扇区的内容到win[] 没有理解
 
+
+
+*/
 static
 FRESULT move_window (	/* FR_OK(0):succeeded, !=0:error */
 	FATFS* fs,		/* File system object */
@@ -2108,6 +2120,7 @@ FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
 
 /*-----------------------------------------------------------------------*/
 /* Get logical drive number from path name                               */
+// 获取当前扇区号
 /*-----------------------------------------------------------------------*/
 
 static
@@ -2129,7 +2142,7 @@ int get_ldnumber (		/* Returns logical drive number (-1:invalid drive) */
 	if (*path) {	/* If the pointer is not a null */
 		for (tt = *path; (UINT)*tt >= (_USE_LFN ? ' ' : '!') && *tt != ':'; tt++) ;	/* Find ':' in the path */
 		if (*tt == ':') {	/* If a ':' is exist in the path name */
-			tp = *path;
+			tp = *path;	//  
 			i = *tp++ - '0'; 
 			if (i < 10 && tp == tt) {	/* Is there a numeric drive id? */
 				if (i < _VOLUMES) {	/* If a drive id is found, get the value and strip it */
@@ -2169,6 +2182,7 @@ int get_ldnumber (		/* Returns logical drive number (-1:invalid drive) */
 
 /*-----------------------------------------------------------------------*/
 /* Load a sector and check if it is an FAT boot sector                   */
+// 检查 MBR DBR 扇区上的 最后两个byte和FAT
 /*-----------------------------------------------------------------------*/
 
 static
@@ -2197,6 +2211,8 @@ BYTE check_fs (	/* 0:Valid FAT-BS, 1:Valid BS but not FAT, 2:Not a BS, 3:Disk er
 
 /*-----------------------------------------------------------------------*/
 /* Find logical drive and check if the volume is mounted                 */
+/* 查找逻辑驱动器并检查卷是否已安装                										 */
+
 /*-----------------------------------------------------------------------*/
 
 static
@@ -2221,14 +2237,15 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 	if (vol < 0) return FR_INVALID_DRIVE;
 
 	/* Check if the file system object is valid or not */
+	// 标记第几个分区号
 	fs = FatFs[vol];					/* Get pointer to the file system object */
 	if (!fs) return FR_NOT_ENABLED;		/* Is the file system object available? */
 
-	ENTER_FF(fs);						/* Lock the volume */
+	ENTER_FF(fs);						// 上锁 开始操作/* Lock the volume */
 	*rfs = fs;							/* Return pointer to the file system object */
 
 	if (fs->fs_type) {					/* If the volume has been mounted */
-		stat = disk_status(fs->drv);
+		stat = disk_status(fs->drv);	// 获取当前disk 的状态
 		if (!(stat & STA_NOINIT)) {		/* and the physical drive is kept initialized */
 			if (!_FS_READONLY && wmode && (stat & STA_PROTECT))	/* Check write protection if needed */
 				return FR_WRITE_PROTECTED;
@@ -2241,19 +2258,21 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 
 	fs->fs_type = 0;					/* Clear the file system object */
 	fs->drv = LD2PD(vol);				/* Bind the logical drive and a physical drive */
-	stat = disk_initialize(fs->drv);	/* Initialize the physical drive */
+	stat = disk_initialize(fs->drv);	// 初始化这个磁盘 或者这个设备 看返回值状态
+										/* Initialize the physical drive */
 	if (stat & STA_NOINIT)				/* Check if the initialization succeeded */
 		return FR_NOT_READY;			/* Failed to initialize due to no medium or hard error */
-	if (!_FS_READONLY && wmode && (stat & STA_PROTECT))	/* Check disk write protection if needed */
+	if (!_FS_READONLY && wmode && (stat & STA_PROTECT))		// 写保护的玩意儿/* Check disk write protection if needed */
 		return FR_WRITE_PROTECTED;
 #if _MAX_SS != _MIN_SS						/* Get sector size (multiple sector size cfg only) */
-	if (disk_ioctl(fs->drv, GET_SECTOR_SIZE, &SS(fs)) != RES_OK
+	if (disk_ioctl(fs->drv, GET_SECTOR_SIZE, &SS(fs)) != RES_OK	// 获取扇区大小
 		|| SS(fs) < _MIN_SS || SS(fs) > _MAX_SS) return FR_DISK_ERR;
 #endif
 	/* Find an FAT partition on the drive. Supports only generic partitioning, FDISK and SFD. */
 	bsect = 0;
 	fmt = check_fs(fs, bsect);					/* Load sector 0 and check if it is an FAT boot sector as SFD */
 	if (fmt == 1 || (!fmt && (LD2PT(vol)))) {	/* Not an FAT boot sector or forced partition number */
+		// 03点14分 TAG
 		for (i = 0; i < 4; i++) {			/* Get partition offset */
 			pt = fs->win + MBR_Table + i * SZ_PTE;
 			br[i] = pt[4] ? LD_DWORD(&pt[8]) : 0;
@@ -2453,7 +2472,7 @@ FRESULT f_open (
 )
 {
 	FRESULT res;
-	DIR dj;
+	DIR dj;	// 目录项指针
 	BYTE *dir;
 	DEFINE_NAMEBUF;
 #if !_FS_READONLY

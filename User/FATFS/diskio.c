@@ -53,6 +53,7 @@ DSTATUS disk_initialize (
 			if(SD_Init()==SD_OK)
 			{
 				status &= ~STA_NOINIT;
+				// status = ~1 & 1
 			}
 			else 
 			{
@@ -86,7 +87,7 @@ DRESULT disk_read (
 	
 	switch (pdrv) {
 		case ATA:	/* SD CARD */						
-		  if((DWORD)buff&3)
+		  if((DWORD)buff&3)	// 非4字节对齐
 			{
 				DRESULT res = RES_OK;
 				DWORD scratch[SD_BLOCKSIZE / 4];
@@ -101,7 +102,7 @@ DRESULT disk_read (
 					}
 					memcpy(buff, scratch, SD_BLOCKSIZE);
 					buff += SD_BLOCKSIZE;
-		    }
+		    	}
 		    return res;
 			}
 			
@@ -149,21 +150,21 @@ DRESULT disk_write (
 
 	switch (pdrv) {
 		case ATA:	/* SD CARD */  
-			if((DWORD)buff&3)
+			if((DWORD)buff&3)	// 4字节对齐 不是4字节对齐的地址 进入
 			{
 				DRESULT res = RES_OK;
-				DWORD scratch[SD_BLOCKSIZE / 4];
+				DWORD scratch[SD_BLOCKSIZE / 4];	// 128
 
 				while (count--) 
 				{
-					memcpy( scratch,buff,SD_BLOCKSIZE);
+					memcpy( scratch,buff,SD_BLOCKSIZE);	
 					res = disk_write(ATA,(void *)scratch, sector++, 1);
 					if (res != RES_OK) 
 					{
 						break;
 					}					
 					buff += SD_BLOCKSIZE;
-		    }
+		    	}
 		    return res;
 			}		
 		
@@ -200,12 +201,12 @@ DRESULT disk_write (
 #if _USE_IOCTL
 DRESULT disk_ioctl (
 	BYTE pdrv,		/* 物理编号 */
-	BYTE cmd,		  /* 控制指令 */
+	BYTE cmd,		  /* 控制指令 *//* Command code for disk_ioctrl fucntion */
 	void *buff		/* 写入或者读取数据地址指针 */
 )
 {
 	DRESULT status = RES_PARERR;
-	switch (pdrv) {
+	switch (pdrv) {	// 根据设备的类型
 		case ATA:	/* SD CARD */
 			switch (cmd) 
 			{
