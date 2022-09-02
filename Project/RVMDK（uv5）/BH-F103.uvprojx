@@ -603,6 +603,26 @@
               <FileType>5</FileType>
               <FilePath>..\..\User\TimBase\bsp_TiMbase.h</FilePath>
             </File>
+            <File>
+              <FileName>bsp_sdio_sdcard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\sdio\bsp_sdio_sdcard.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_sdio_sdcard.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\sdio\bsp_sdio_sdcard.h</FilePath>
+            </File>
+            <File>
+              <FileName>sdio_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\sdio\sdio_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>sdio_test.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\sdio\sdio_test.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
