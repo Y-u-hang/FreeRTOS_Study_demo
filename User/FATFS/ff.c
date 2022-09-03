@@ -400,8 +400,10 @@ typedef struct {
 #define BS_FilSysType32		82		/* File system type (1) */
 #define	FSI_LeadSig			0		/* FSI: Leading signature (4) */
 #define	FSI_StrucSig		484		/* FSI: Structure signature (4) */
-#define	FSI_Free_Count		488		/* FSI: Number of free clusters (4) */
-#define	FSI_Nxt_Free		492		/* FSI: Last allocated cluster (4) */
+#define	FSI_Free_Count		488		// FSINFO 扇区 的 1E8 偏移地址上 空闲簇的个数
+									/* FSI: Number of free clusters (4) */
+#define	FSI_Nxt_Free		492		// 已经使用簇的个数
+									/* FSI: Last allocated cluster (4) */
 #define MBR_Table			446		/* MBR: Partition table offset (2) */
 #define	SZ_PTE				16		/* MBR: Size of a partition table entry */
 #define BS_55AA				510		/* Signature word (2) */
@@ -1874,7 +1876,8 @@ FRESULT create_name (	/* FR_OK: successful, FR_INVALID_NAME: could not create */
 			return FR_INVALID_NAME;
 #if !_LFN_UNICODE
 		w &= 0xFF;
-		if (IsDBCS1(w)) {				/* Check if it is a DBC 1st byte (always false on SBCS cfg) */
+		if (IsDBCS1(w)) {				// 检查它是否是 DBC 第一个字节（在 SBCS cfg 上始终为 false）
+										/* Check if it is a DBC 1st byte (always false on SBCS cfg) */
 			b = (BYTE)p[si++];			/* Get 2nd byte */
 			w = (w << 8) + b;			/* Create a DBC */
 			if (!IsDBCS2(b))
@@ -2182,7 +2185,7 @@ int get_ldnumber (		/* Returns logical drive number (-1:invalid drive) */
 
 /*-----------------------------------------------------------------------*/
 /* Load a sector and check if it is an FAT boot sector                   */
-// 检查 MBR DBR 扇区上的 最后两个byte和FAT
+// 检查 MBR DBR 扇区上的 最后两个byte和FAT 判断这个扇区是否合格
 /*-----------------------------------------------------------------------*/
 
 static
@@ -2212,7 +2215,7 @@ BYTE check_fs (	/* 0:Valid FAT-BS, 1:Valid BS but not FAT, 2:Not a BS, 3:Disk er
 /*-----------------------------------------------------------------------*/
 /* Find logical drive and check if the volume is mounted                 */
 /* 查找逻辑驱动器并检查卷是否已安装                										 */
-
+// 主要针对 MBR 结尾64Byte DBR 的BSP部分 BSINFO 1E8位置
 /*-----------------------------------------------------------------------*/
 
 static
@@ -2244,7 +2247,7 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 	ENTER_FF(fs);						// 上锁 开始操作/* Lock the volume */
 	*rfs = fs;							/* Return pointer to the file system object */
 
-	if (fs->fs_type) {					/* If the volume has been mounted */
+	if (fs->fs_type) {					/* 判定磁盘当前状态,如果磁盘被初始化过,那么就判定是挂载过了,直接返回OK *//* If the volume has been mounted */
 		stat = disk_status(fs->drv);	// 获取当前disk 的状态
 		if (!(stat & STA_NOINIT)) {		/* and the physical drive is kept initialized */
 			if (!_FS_READONLY && wmode && (stat & STA_PROTECT))	/* Check write protection if needed */
@@ -2255,7 +2258,8 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 
 	/* The file system object is not valid. */
 	/* Following code attempts to mount the volume. (analyze BPB and initialize the fs object) */
-
+	
+	/* 2.进行FATFS结构体填充 */
 	fs->fs_type = 0;					/* Clear the file system object */
 	fs->drv = LD2PD(vol);				/* Bind the logical drive and a physical drive */
 	stat = disk_initialize(fs->drv);	// 初始化这个磁盘 或者这个设备 看返回值状态
@@ -2270,12 +2274,15 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 #endif
 	/* Find an FAT partition on the drive. Supports only generic partitioning, FDISK and SFD. */
 	bsect = 0;
+
+    /* 2.2 check_fs()函数会把磁盘的第1个扇区(就是MBR)读入到fs->win[]数组中, 判断MBR是否是合法的MBR*/
 	fmt = check_fs(fs, bsect);					/* Load sector 0 and check if it is an FAT boot sector as SFD */
-	if (fmt == 1 || (!fmt && (LD2PT(vol)))) {	/* Not an FAT boot sector or forced partition number */
+	if (fmt == 1 || (!fmt && (LD2PT(vol)))) {	// 不是FAT的根分区 或者强制分区号/* Not an FAT boot sector or forced partition number */
 		// 03点14分 TAG
 		for (i = 0; i < 4; i++) {			/* Get partition offset */
-			pt = fs->win + MBR_Table + i * SZ_PTE;
-			br[i] = pt[4] ? LD_DWORD(&pt[8]) : 0;
+			pt = fs->win + MBR_Table + i * SZ_PTE;	// MBR后续64byte
+			br[i] = pt[4] ? LD_DWORD(&pt[8]) : 0;	// 分区起始扇区号
+			printf("br[i] = %d \n", br[i]);
 		}
 		i = LD2PT(vol);						/* Partition number: 0:auto, 1-4:forced */
 		if (i) i--;
@@ -2289,50 +2296,66 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 
 	/* An FAT volume is found. Following code initializes the file system object */
 
+	// 每个扇区的大小
 	if (LD_WORD(fs->win + BPB_BytsPerSec) != SS(fs))	/* (BPB_BytsPerSec must be equal to the physical sector size) */
 		return FR_NO_FILESYSTEM;
-
+	// 该位置 FAT32 为0
 	fasize = LD_WORD(fs->win + BPB_FATSz16);			/* Number of sectors per FAT */
-	if (!fasize) fasize = LD_DWORD(fs->win + BPB_FATSz32);
-	fs->fsize = fasize;
 
+	// 该地址上值为0 为FAT32 
+	if (!fasize) fasize = LD_DWORD(fs->win + BPB_FATSz32);
+	// FAT表占用的扇区数
+	fs->fsize = fasize;
+	// FAT表的个数
 	fs->n_fats = fs->win[BPB_NumFATs];					/* Number of FAT copies */
 	if (fs->n_fats != 1 && fs->n_fats != 2)				/* (Must be 1 or 2) */
 		return FR_NO_FILESYSTEM;
+	// FAT32 FAT表占用的扇区数 * FAt表的个数
 	fasize *= fs->n_fats;								/* Number of sectors for FAT area */
 
+	// 每个簇有多少个扇区
 	fs->csize = fs->win[BPB_SecPerClus];				/* Number of sectors per cluster */
 	if (!fs->csize || (fs->csize & (fs->csize - 1)))	/* (Must be power of 2) */
 		return FR_NO_FILESYSTEM;
-
+	// FAT12/16 的根目录中 目录的个数
+	// FAT32 为0
 	fs->n_rootdir = LD_WORD(fs->win + BPB_RootEntCnt);	/* Number of root directory entries */
 	if (fs->n_rootdir % (SS(fs) / SZ_DIRE))				/* (Must be sector aligned) */
 		return FR_NO_FILESYSTEM;
 
+	// FAT16 为扇区总数 FAT32为0
 	tsect = LD_WORD(fs->win + BPB_TotSec16);			/* Number of sectors on the volume */
+	// 文件系统总扇区数
 	if (!tsect) tsect = LD_DWORD(fs->win + BPB_TotSec32);
 
+	// 保留扇区大小
 	nrsv = LD_WORD(fs->win + BPB_RsvdSecCnt);			/* Number of reserved sectors */
 	if (!nrsv) return FR_NO_FILESYSTEM;					/* (Must not be 0) */
 
 	/* Determine the FAT sub type */
 	sysect = nrsv + fasize + fs->n_rootdir / (SS(fs) / SZ_DIRE);	/* RSV + FAT + DIR */
+	printf("加起来共有多少个扇区 sysect %d \n", sysect);
+	// 文件系统总扇区数 比较 刚才算的扇区数 
 	if (tsect < sysect) return FR_NO_FILESYSTEM;		/* (Invalid volume size) */
+	// 计算有多少个簇
 	nclst = (tsect - sysect) / fs->csize;				/* Number of clusters */
 	if (!nclst) return FR_NO_FILESYSTEM;				/* (Invalid volume size) */
 	fmt = FS_FAT12;
+
+	// 这样判断？？？ 用簇来？
 	if (nclst >= MIN_FAT16) fmt = FS_FAT16;
 	if (nclst >= MIN_FAT32) fmt = FS_FAT32;
 
 	/* Boundaries and Limits */
-	fs->n_fatent = nclst + 2;							/* Number of FAT entries */
+	fs->n_fatent = nclst + 2;							// 没理解 /* Number of FAT entries */
 	fs->volbase = bsect;								/* Volume start sector */
 	fs->fatbase = bsect + nrsv; 						/* FAT start sector */
 	fs->database = bsect + sysect;						/* Data start sector */
 	if (fmt == FS_FAT32) {
 		if (fs->n_rootdir) return FR_NO_FILESYSTEM;		/* (BPB_RootEntCnt must be 0) */
+		// 根目录第一簇
 		fs->dirbase = LD_DWORD(fs->win + BPB_RootClus);	/* Root directory start cluster */
-		szbfat = fs->n_fatent * 4;						/* (Needed FAT size) */
+		szbfat = fs->n_fatent * 4;						// 没理解 /* (Needed FAT size) */
 	} else {
 		if (!fs->n_rootdir)	return FR_NO_FILESYSTEM;	/* (BPB_RootEntCnt must not be 0) */
 		fs->dirbase = fs->fatbase + fasize;				/* Root directory start sector */
@@ -2351,9 +2374,9 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 #if (_FS_NOFSINFO & 3) != 3
 	if (fmt == FS_FAT32				/* Enable FSINFO only if FAT32 and BPB_FSInfo == 1 */
 		&& LD_WORD(fs->win + BPB_FSInfo) == 1
-		&& move_window(fs, bsect + 1) == FR_OK)
+		&& move_window(fs, bsect + 1) == FR_OK)	// 获取下一个扇区？
 	{
-		fs->fsi_flag = 0;
+		fs->fsi_flag = 0; // is dirty
 		if (LD_WORD(fs->win + BS_55AA) == 0xAA55	/* Load FSINFO data if available */
 			&& LD_DWORD(fs->win + FSI_LeadSig) == 0x41615252
 			&& LD_DWORD(fs->win + FSI_StrucSig) == 0x61417272)
@@ -2600,6 +2623,9 @@ FRESULT f_open (
 
 /*-----------------------------------------------------------------------*/
 /* Read File                                                             */
+/*	文件对象中的读 / 写指针以已读取字节数增加。该函数成功后，应该检查  									*/
+/*	*ByteRead  来检测文件是否结束。在读操作过程中，一旦											*/
+/* 	*ByteRead < ByteToRead  ，则读 / 写指针到达了文件结束位置								*/
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_read (
@@ -2701,6 +2727,9 @@ FRESULT f_read (
 #if !_FS_READONLY
 /*-----------------------------------------------------------------------*/
 /* Write File                                                            */
+/*文件对象中的读 / 写指针以已写入字节数增加。该函数成功后，应该检查										*/
+/*	*ByteWritten  来检测磁盘是否已满。在写操作过程中，一旦  									*/
+/* 	*ByteWritten < *ByteToWritten  ，则意味着该卷已满。 								*/
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_write (
@@ -2870,7 +2899,10 @@ FRESULT f_sync (
 
 
 /*-----------------------------------------------------------------------*/
-/* Close File                                                            */
+/* Close File 																*/
+/* f_close 函数关闭一个打开的文件对象。无论向文件写入任何数据，文件的缓存信	*/
+/*	息都将被写回到磁盘。该函数成功后，文件对象不再有效，并且可以被丢弃。如果*/
+/*	文件对象是在只读模式下打开的，不需要使用该函数，也能被丢弃											*/
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_close (
@@ -3201,6 +3233,7 @@ FRESULT f_lseek (
 #if _FS_MINIMIZE <= 1
 /*-----------------------------------------------------------------------*/
 /* Create a Directory Object                                             */
+/*打开一个目录*/
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_opendir (
@@ -3289,6 +3322,7 @@ FRESULT f_closedir (
 
 /*-----------------------------------------------------------------------*/
 /* Read Directory Entries in Sequence                                    */
+// 从当前目录项指针处读取一个目录项，并且移动目录指针到下一个索引
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_readdir (
@@ -3540,6 +3574,10 @@ FRESULT f_truncate (
 
 /*-----------------------------------------------------------------------*/
 /* Delete a File or Directory                                            */
+//删除一个文件或者目录
+//1、删除目录或者文件的簇链（回收数据空间）
+//2、文件或者目录的目录项被设置成为删除（0xE5），注意目录项并没有回收，只是标记为删除
+
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_unlink (
@@ -3609,6 +3647,7 @@ FRESULT f_unlink (
 
 /*-----------------------------------------------------------------------*/
 /* Create a Directory                                                    */
+// 创建一个目录
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_mkdir (

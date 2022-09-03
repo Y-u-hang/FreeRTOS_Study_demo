@@ -1,4 +1,4 @@
-/*------------------------------------------------------------------------*/
+﻿/*------------------------------------------------------------------------*/
 /* Unicode - OEM code bidirectional converter  (C)ChaN, 2015              */
 /* CP936 (Simplified Chinese GBK)                                         */
 /*------------------------------------------------------------------------*/
@@ -10919,7 +10919,7 @@ const WCHAR oem2uni[] = {
 };
 
 
-
+// 为支持简体中文长文件名称需要添加ff_convert和ff_wtoupper函数，实际这两个已经在cc936.c文件中实现了
 WCHAR ff_convert (	/* Converted code, 0 means conversion error */
 	WCHAR	chr,	/* Character code to be converted */
 	UINT	dir		/* 0: Unicode to OEM code, 1: OEM code to Unicode */

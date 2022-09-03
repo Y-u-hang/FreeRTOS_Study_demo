@@ -126,7 +126,7 @@
 
 #define _FS_RPATH	0
 /* This option configures relative path feature.
-/
+/	此选项配置相对路径功能
 /   0: Disable relative path feature and remove related functions.
 /   1: Enable relative path feature. f_chdir() and f_chdrive() are available.
 /   2: f_getcwd() function is available in addition to 1.
