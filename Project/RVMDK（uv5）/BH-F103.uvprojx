@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD, USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase</IncludePath>
+              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase;..\..\User\FATFS;..\..\User\FATFS\option</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -622,6 +622,46 @@
               <FileName>sdio_test.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\User\sdio\sdio_test.h</FilePath>
+            </File>
+            <File>
+              <FileName>diskio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\FATFS\diskio.c</FilePath>
+            </File>
+            <File>
+              <FileName>diskio.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\FATFS\diskio.h</FilePath>
+            </File>
+            <File>
+              <FileName>ff.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\FATFS\ff.c</FilePath>
+            </File>
+            <File>
+              <FileName>ff.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\FATFS\ff.h</FilePath>
+            </File>
+            <File>
+              <FileName>ffconf.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\FATFS\ffconf.h</FilePath>
+            </File>
+            <File>
+              <FileName>integer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\FATFS\integer.h</FilePath>
+            </File>
+            <File>
+              <FileName>cc936.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\FATFS\option\cc936.c</FilePath>
+            </File>
+            <File>
+              <FileName>syscall.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\FATFS\option\syscall.c</FilePath>
             </File>
           </Files>
         </Group>
