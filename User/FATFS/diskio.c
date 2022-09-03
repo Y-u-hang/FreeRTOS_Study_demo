@@ -8,7 +8,7 @@
 #include "diskio.h"
 #include "stm32f10x.h"
 #include "./sdio/bsp_sdio_sdcard.h"
-
+#include "stdio.h"
 /* 为每个设备定义一个物理编号 */
 #define ATA			           0     // SD卡
 #define SPI_FLASH		       1     // 预留外部SPI Flash使用
@@ -84,13 +84,16 @@ DRESULT disk_read (
 {
 	DRESULT status = RES_PARERR;
 	SD_Error SD_state = SD_OK;
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 	
 	switch (pdrv) {
+
 		case ATA:	/* SD CARD */						
 		  if((DWORD)buff&3)	// 非4字节对齐
 			{
 				DRESULT res = RES_OK;
 				DWORD scratch[SD_BLOCKSIZE / 4];
+				printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 
 				while (count--) 
 				{
@@ -105,14 +108,21 @@ DRESULT disk_read (
 		    	}
 		    return res;
 			}
-			
+			printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+
 			SD_state=SD_ReadMultiBlocks(buff,(uint64_t)sector*SD_BLOCKSIZE,SD_BLOCKSIZE,count);
 		  if(SD_state==SD_OK)
 			{
 				/* Check if the Transfer is finished */
+				printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 				SD_state=SD_WaitReadOperation();
-				while(SD_GetStatus() != SD_TRANSFER_OK);
+				printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+				//while(i--);
+				while(SD_GetStatus() != SD_TRANSFER_OK){
+					printf(".");
+				}
 			}
+		  printf("\n[%s][%d]\n",__FUNCTION__,__LINE__);
 			if(SD_state!=SD_OK)
 				status = RES_PARERR;
 		  else
@@ -125,6 +135,7 @@ DRESULT disk_read (
 		default:
 			status = RES_PARERR;
 	}
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 	return status;
 }
 
@@ -143,11 +154,10 @@ DRESULT disk_write (
 {
 	DRESULT status = RES_PARERR;
 	SD_Error SD_state = SD_OK;
-	
 	if (!count) {
 		return RES_PARERR;		/* Check parameter */
 	}
-
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 	switch (pdrv) {
 		case ATA:	/* SD CARD */  
 			if((DWORD)buff&3)	// 4字节对齐 不是4字节对齐的地址 进入
@@ -173,7 +183,7 @@ DRESULT disk_write (
 			{
 				/* Check if the Transfer is finished */
 				SD_state=SD_WaitWriteOperation();
-
+				printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 				/* Wait until end of DMA transfer */
 				while(SD_GetStatus() != SD_TRANSFER_OK);			
 			}

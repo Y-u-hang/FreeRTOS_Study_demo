@@ -110,11 +110,8 @@ void SD_EraseTest(void)
 	//printf("error is status %d\n",Status);
     /* Wait until end of DMA transfer */
 	// 等待传输完成
-//    while(SD_GetStatus() != SD_TRANSFER_OK){
-//		printf("error is SD_GetStatus() %d\n",SD_GetStatus());
-//	}
-	while(!((i --) ||  (SD_GetStatus() != SD_TRANSFER_OK)))
-	printf("Single block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
+    while(SD_GetStatus() != SD_TRANSFER_OK);
+
   }
   //printf("Single block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
 

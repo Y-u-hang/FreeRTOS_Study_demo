@@ -549,6 +549,7 @@ SD_Error SD_Init(void)
   {
 			/* 最后为了提高读写，开启4bits模式 */
     errorstatus = SD_EnableWideBusOperation(SDIO_BusWide_4b);
+	printf("errorstatus is %d\n", errorstatus);
   }  
 
   return(errorstatus);
@@ -1531,8 +1532,8 @@ SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint64_t ReadAddr, uint16_t Block
   {
     return(errorstatus);
   }
-
-  SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);  //开启数据传输结束中断 ，Data end (data counter, SDIDCOUNT, is zero) interrupt 
+	SDIO_ITConfig(SDIO_IT_RXOVERR|SDIO_IT_DTIMEOUT|SDIO_IT_DCRCFAIL|SDIO_IT_DATAEND, ENABLE);
+  //SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);  //开启数据传输结束中断 ，Data end (data counter, SDIDCOUNT, is zero) interrupt 
   SDIO_DMACmd(ENABLE); //使能dma方式
   SD_DMA_RxConfig((uint32_t *)readbuff, (NumberOfBlocks * BlockSize));//配置DMA接收
 
@@ -1552,7 +1553,9 @@ SD_Error SD_WaitReadOperation(void)
   SD_Error errorstatus = SD_OK;
 		  //等待dma传输结束
   while ((SD_DMAEndOfTransferStatus() == RESET) && (TransferEnd == 0) && (TransferError == SD_OK))
-  {}
+  {
+		printf(".");
+  }
 
   if (TransferError != SD_OK)
   {
@@ -1692,7 +1695,8 @@ SD_Error SD_WriteBlock(uint8_t *writebuff, uint64_t WriteAddr, uint16_t BlockSiz
     return(errorstatus);
   }
 #elif defined (SD_DMA_MODE)	//dma模式
-  SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);  //数据传输结束中断
+	SDIO_ITConfig(SDIO_IT_RXOVERR|SDIO_IT_DTIMEOUT|SDIO_IT_DCRCFAIL|SDIO_IT_DATAEND, ENABLE);
+  //SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);  //数据传输结束中断
   SD_DMA_TxConfig((uint32_t *)writebuff, BlockSize); //配置dma，跟rx类似
   SDIO_DMACmd(ENABLE);	 //	使能sdio的dma请求
 #endif
@@ -1817,8 +1821,8 @@ SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint64_t WriteAddr, uint16_t Bl
   SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
   SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
   SDIO_DataConfig(&SDIO_DataInitStructure);
-
-  SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);
+	SDIO_ITConfig(SDIO_IT_RXOVERR|SDIO_IT_DTIMEOUT|SDIO_IT_DCRCFAIL|SDIO_IT_DATAEND, ENABLE);
+  //SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);
   SDIO_DMACmd(ENABLE);    
   SD_DMA_TxConfig((uint32_t *)writebuff, (NumberOfBlocks * BlockSize));
 
@@ -2133,23 +2137,51 @@ SD_Error SD_SendSDStatus(uint32_t *psdstatus)
  * 输入  ：无		 
  * 输出  ：SD错误类型
  */
+
 SD_Error SD_ProcessIRQSrc(void)
 {
-  if (StopCondition == 1)  //什么时候置1了？
-  {
-    SDIO->ARG = 0x0;   //命令参数寄存器
-    SDIO->CMD = 0x44C;	  // 命令寄存器： 0100 	01 	 	001100
-						//						[7:6]  	[5:0]
-						//				CPSMEN  WAITRESP CMDINDEX
-						//		开启命令状态机	短响应   cmd12 STOP_ TRANSMISSION						
-    TransferError = CmdResp1Error(SD_CMD_STOP_TRANSMISSION);
-  }
-  else
-  {
-    TransferError = SD_OK;
-  }
+	  if (SDIO_GetFlagStatus(SDIO_FLAG_DTIMEOUT) != RESET)
+	  {
+		  SDIO_ClearFlag(SDIO_FLAG_DTIMEOUT);
+		  TransferError = SD_DATA_TIMEOUT;
+	  }
+	  else if (SDIO_GetFlagStatus(SDIO_FLAG_DCRCFAIL) != RESET)
+	  {
+		  SDIO_ClearFlag(SDIO_FLAG_DCRCFAIL);
+		  TransferError = SD_DATA_CRC_FAIL;
+	  }
+	  else if (SDIO_GetFlagStatus(SDIO_FLAG_RXOVERR) != RESET)
+	  {
+		  SDIO_ClearFlag(SDIO_FLAG_RXOVERR);
+		  TransferError = SD_RX_OVERRUN;
+	  }
+	  else if (SDIO_GetFlagStatus(SDIO_FLAG_STBITERR) != RESET)
+	  {
+		  SDIO_ClearFlag(SDIO_FLAG_STBITERR);
+		  TransferError = SD_START_BIT_ERR;
+	  }
+	  else
+	  {
+
+		  if (StopCondition == 1)  //什么时候置1了？
+		  {
+		    SDIO->ARG = 0x0;   //命令参数寄存器
+		    SDIO->CMD = 0x44C;	  // 命令寄存器： 0100 	01 	 	001100
+								//						[7:6]  	[5:0]
+								//				CPSMEN  WAITRESP CMDINDEX
+								//		开启命令状态机	短响应   cmd12 STOP_ TRANSMISSION						
+		    TransferError = CmdResp1Error(SD_CMD_STOP_TRANSMISSION);
+		  }
+		  else
+		  {
+		    TransferError = SD_OK;
+		  }
+	  	}
+	  
   SDIO_ClearITPendingBit(SDIO_IT_DATAEND); //清中断
-  SDIO_ITConfig(SDIO_IT_DATAEND, DISABLE); //关闭sdio中断使能
+  SDIO_ITConfig(SDIO_IT_RXOVERR|SDIO_IT_DTIMEOUT|SDIO_IT_DCRCFAIL|SDIO_IT_DATAEND, DISABLE);
+
+  //SDIO_ITConfig(SDIO_IT_DATAEND, DISABLE); //关闭sdio中断使能
   TransferEnd = 1;
   return(TransferError);
 }

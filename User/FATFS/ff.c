@@ -18,7 +18,7 @@
 
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of disk I/O functions */
-
+#include "stdio.h"
 
 /*--------------------------------------------------------------------------
 
@@ -708,7 +708,7 @@ FRESULT sync_window (	/* FR_OK:succeeded, !=0:error */
 	UINT nf;
 	FRESULT res = FR_OK;
 
-
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 	if (fs->wflag) {	/* Write back the sector if it is dirty */
 		wsect = fs->winsect;	/* Current sector number */
 		if (disk_write(fs->drv, fs->win, wsect, 1) != RES_OK) {
@@ -723,6 +723,7 @@ FRESULT sync_window (	/* FR_OK:succeeded, !=0:error */
 			}
 		}
 	}
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 	return res;
 }
 #endif
@@ -747,6 +748,7 @@ FRESULT move_window (	/* FR_OK(0):succeeded, !=0:error */
 {
 	FRESULT res = FR_OK;
 
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 
 	if (sector != fs->winsect) {	/* Window offset changed? */
 #if !_FS_READONLY
@@ -760,6 +762,7 @@ FRESULT move_window (	/* FR_OK(0):succeeded, !=0:error */
 			fs->winsect = sector;
 		}
 	}
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 	return res;
 }
 
@@ -2197,7 +2200,7 @@ BYTE check_fs (	/* 0:Valid FAT-BS, 1:Valid BS but not FAT, 2:Not a BS, 3:Disk er
 	fs->wflag = 0; fs->winsect = 0xFFFFFFFF;	/* Invaidate window */
 	if (move_window(fs, sect) != FR_OK)			/* Load boot record */
 		return 3;
-
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 	if (LD_WORD(&fs->win[BS_55AA]) != 0xAA55)	/* Check boot record signature (always placed at offset 510 even if the sector size is >512) */
 		return 2;
 
@@ -2238,7 +2241,7 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 	*rfs = 0;
 	vol = get_ldnumber(path);
 	if (vol < 0) return FR_INVALID_DRIVE;
-
+	printf("[%s]\n",__FUNCTION__);
 	/* Check if the file system object is valid or not */
 	// 标记第几个分区号
 	fs = FatFs[vol];					/* Get pointer to the file system object */
@@ -2274,9 +2277,11 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 #endif
 	/* Find an FAT partition on the drive. Supports only generic partitioning, FDISK and SFD. */
 	bsect = 0;
-
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
     /* 2.2 check_fs()函数会把磁盘的第1个扇区(就是MBR)读入到fs->win[]数组中, 判断MBR是否是合法的MBR*/
 	fmt = check_fs(fs, bsect);					/* Load sector 0 and check if it is an FAT boot sector as SFD */
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+
 	if (fmt == 1 || (!fmt && (LD2PT(vol)))) {	// 不是FAT的根分区 或者强制分区号/* Not an FAT boot sector or forced partition number */
 		// 03点14分 TAG
 		for (i = 0; i < 4; i++) {			/* Get partition offset */
@@ -2789,6 +2794,8 @@ FRESULT f_write (
 				fp->flag &= ~FA__DIRTY;
 			}
 #endif
+			printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+
 			sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
 			if (!sect) ABORT(fp->fs, FR_INT_ERR);
 			sect += csect;
@@ -2843,6 +2850,7 @@ FRESULT f_write (
 
 	if (fp->fptr > fp->fsize) fp->fsize = fp->fptr;	/* Update file size if needed */
 	fp->flag |= FA__WRITTEN;						/* Set file change flag */
+	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
 
 	LEAVE_FF(fp->fs, FR_OK);
 }
