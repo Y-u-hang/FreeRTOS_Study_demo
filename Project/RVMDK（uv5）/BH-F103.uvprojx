@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD, USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase;..\..\User\FATFS;..\..\User\FATFS\option</IncludePath>
+              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase;..\..\User\FATFS;..\..\User\FATFS\option;..\..\User\fat</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -662,6 +662,16 @@
               <FileName>syscall.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\User\FATFS\option\syscall.c</FilePath>
+            </File>
+            <File>
+              <FileName>fatfs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\fat\fatfs.c</FilePath>
+            </File>
+            <File>
+              <FileName>fatfs.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\fat\fatfs.h</FilePath>
             </File>
           </Files>
         </Group>
