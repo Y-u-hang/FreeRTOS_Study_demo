@@ -673,6 +673,11 @@
               <FileType>5</FileType>
               <FilePath>..\..\User\fat\fatfs.h</FilePath>
             </File>
+            <File>
+              <FileName>log.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\log.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
