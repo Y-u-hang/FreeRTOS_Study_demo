@@ -1,4 +1,4 @@
-/**
+﻿/**
   ******************************************************************************
   * @file    stm32f10x_sdio.h
   * @author  MCD Application Team
@@ -30,7 +30,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x.h"
-
+#include "log.h"
 /** @addtogroup STM32F10x_StdPeriph_Driver
   * @{
   */

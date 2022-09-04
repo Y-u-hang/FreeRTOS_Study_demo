@@ -19,7 +19,7 @@
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of disk I/O functions */
 #include "stdio.h"
-
+#include "log.h"
 /*--------------------------------------------------------------------------
 
    Module Private Definitions
@@ -708,7 +708,7 @@ FRESULT sync_window (	/* FR_OK:succeeded, !=0:error */
 	UINT nf;
 	FRESULT res = FR_OK;
 
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	FF_DEBUG("\n");
 	if (fs->wflag) {	/* Write back the sector if it is dirty */
 		wsect = fs->winsect;	/* Current sector number */
 		if (disk_write(fs->drv, fs->win, wsect, 1) != RES_OK) {
@@ -723,7 +723,7 @@ FRESULT sync_window (	/* FR_OK:succeeded, !=0:error */
 			}
 		}
 	}
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	FF_DEBUG("\n");
 	return res;
 }
 #endif
@@ -748,7 +748,7 @@ FRESULT move_window (	/* FR_OK(0):succeeded, !=0:error */
 {
 	FRESULT res = FR_OK;
 
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	FF_DEBUG("\n");
 
 	if (sector != fs->winsect) {	/* Window offset changed? */
 #if !_FS_READONLY
@@ -762,7 +762,7 @@ FRESULT move_window (	/* FR_OK(0):succeeded, !=0:error */
 			fs->winsect = sector;
 		}
 	}
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	FF_DEBUG("\n");
 	return res;
 }
 
@@ -2200,7 +2200,7 @@ BYTE check_fs (	/* 0:Valid FAT-BS, 1:Valid BS but not FAT, 2:Not a BS, 3:Disk er
 	fs->wflag = 0; fs->winsect = 0xFFFFFFFF;	/* Invaidate window */
 	if (move_window(fs, sect) != FR_OK)			/* Load boot record */
 		return 3;
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	FF_DEBUG("\n");
 	if (LD_WORD(&fs->win[BS_55AA]) != 0xAA55)	/* Check boot record signature (always placed at offset 510 even if the sector size is >512) */
 		return 2;
 
@@ -2241,7 +2241,7 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 	*rfs = 0;
 	vol = get_ldnumber(path);
 	if (vol < 0) return FR_INVALID_DRIVE;
-	printf("[%s]\n",__FUNCTION__);
+	FF_INFO("vol is %d\n", vol);
 	/* Check if the file system object is valid or not */
 	// 标记第几个分区号
 	fs = FatFs[vol];					/* Get pointer to the file system object */
@@ -2277,17 +2277,17 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 #endif
 	/* Find an FAT partition on the drive. Supports only generic partitioning, FDISK and SFD. */
 	bsect = 0;
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	FF_DEBUG("\n");
     /* 2.2 check_fs()函数会把磁盘的第1个扇区(就是MBR)读入到fs->win[]数组中, 判断MBR是否是合法的MBR*/
 	fmt = check_fs(fs, bsect);					/* Load sector 0 and check if it is an FAT boot sector as SFD */
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	FF_DEBUG("\n");
 
 	if (fmt == 1 || (!fmt && (LD2PT(vol)))) {	// 不是FAT的根分区 或者强制分区号/* Not an FAT boot sector or forced partition number */
 		// 03点14分 TAG
 		for (i = 0; i < 4; i++) {			/* Get partition offset */
 			pt = fs->win + MBR_Table + i * SZ_PTE;	// MBR后续64byte
 			br[i] = pt[4] ? LD_DWORD(&pt[8]) : 0;	// 分区起始扇区号
-			printf("br[i] = %d \n", br[i]);
+			FF_INFO("br[i] = %d \n", br[i]);
 		}
 		i = LD2PT(vol);						/* Partition number: 0:auto, 1-4:forced */
 		if (i) i--;
@@ -2339,11 +2339,12 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 
 	/* Determine the FAT sub type */
 	sysect = nrsv + fasize + fs->n_rootdir / (SS(fs) / SZ_DIRE);	/* RSV + FAT + DIR */
-	printf("加起来共有多少个扇区 sysect %d \n", sysect);
+	FF_INFO("sysect %d \n", sysect);
 	// 文件系统总扇区数 比较 刚才算的扇区数 
 	if (tsect < sysect) return FR_NO_FILESYSTEM;		/* (Invalid volume size) */
 	// 计算有多少个簇
 	nclst = (tsect - sysect) / fs->csize;				/* Number of clusters */
+	FF_INFO("nclst is %d\n", nclst);
 	if (!nclst) return FR_NO_FILESYSTEM;				/* (Invalid volume size) */
 	fmt = FS_FAT12;
 
@@ -2794,7 +2795,7 @@ FRESULT f_write (
 				fp->flag &= ~FA__DIRTY;
 			}
 #endif
-			printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+			FF_DEBUG("\n");
 
 			sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
 			if (!sect) ABORT(fp->fs, FR_INT_ERR);
@@ -2850,7 +2851,7 @@ FRESULT f_write (
 
 	if (fp->fptr > fp->fsize) fp->fsize = fp->fptr;	/* Update file size if needed */
 	fp->flag |= FA__WRITTEN;						/* Set file change flag */
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	FF_DEBUG("\n");
 
 	LEAVE_FF(fp->fs, FR_OK);
 }

@@ -25,6 +25,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x.h"
+#include "log.h"
 
 /* Exported types ------------------------------------------------------------*/
 typedef enum
@@ -314,9 +315,6 @@ typedef struct
 #define SDIO_SECURE_DIGITAL_IO_COMBO_CARD          ((uint32_t)0x00000006)
 #define SDIO_HIGH_CAPACITY_MMC_CARD                ((uint32_t)0x00000007)
 
-//#define SDIO_DEBUG(fmt, ...) do{printf("[%s][%d][%s]" fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__);}while(0)
-//#define SDIO_DEBUG(fmt, ...) do{printf("[%s][%d]" fmt, __FILE__, __LINE__, ##__VA_ARGS__);}while(0)
-#define SDIO_DEBUG(fmt, ...) do{printf("[%d]" fmt, __LINE__, ##__VA_ARGS__);}while(0)
 
 
 /* Exported functions ------------------------------------------------------- */

@@ -9,6 +9,7 @@
 #include "stm32f10x.h"
 #include "./sdio/bsp_sdio_sdcard.h"
 #include "stdio.h"
+#include "log.h"
 /* 为每个设备定义一个物理编号 */
 #define ATA			           0     // SD卡
 #define SPI_FLASH		       1     // 预留外部SPI Flash使用
@@ -82,10 +83,10 @@ DRESULT disk_read (
 	UINT count		/* 扇区个数(1..128) */
 )
 {
+	int i = 0;
 	DRESULT status = RES_PARERR;
 	SD_Error SD_state = SD_OK;
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
-	
+	DISKIO_DEBUG("\n");
 	switch (pdrv) {
 
 		case ATA:	/* SD CARD */						
@@ -93,7 +94,7 @@ DRESULT disk_read (
 			{
 				DRESULT res = RES_OK;
 				DWORD scratch[SD_BLOCKSIZE / 4];
-				printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+				DISKIO_DEBUG("\n");
 
 				while (count--) 
 				{
@@ -108,21 +109,24 @@ DRESULT disk_read (
 		    	}
 		    return res;
 			}
-			printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+			DISKIO_DEBUG("\n");
 
 			SD_state=SD_ReadMultiBlocks(buff,(uint64_t)sector*SD_BLOCKSIZE,SD_BLOCKSIZE,count);
 		  if(SD_state==SD_OK)
 			{
 				/* Check if the Transfer is finished */
-				printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+				DISKIO_DEBUG("\n");
 				SD_state=SD_WaitReadOperation();
-				printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+				DISKIO_DEBUG("\n");
 				//while(i--);
 				while(SD_GetStatus() != SD_TRANSFER_OK){
 					printf(".");
-				}
+					for(i = 0; i < 20; i++){
+						printf("\n");
+					}
+										}
 			}
-		  printf("\n[%s][%d]\n",__FUNCTION__,__LINE__);
+		  DISKIO_DEBUG("\n");
 			if(SD_state!=SD_OK)
 				status = RES_PARERR;
 		  else
@@ -135,7 +139,7 @@ DRESULT disk_read (
 		default:
 			status = RES_PARERR;
 	}
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	DISKIO_DEBUG("\n");
 	return status;
 }
 
@@ -157,7 +161,7 @@ DRESULT disk_write (
 	if (!count) {
 		return RES_PARERR;		/* Check parameter */
 	}
-	printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+	DISKIO_DEBUG("\n");
 	switch (pdrv) {
 		case ATA:	/* SD CARD */  
 			if((DWORD)buff&3)	// 4字节对齐 不是4字节对齐的地址 进入
@@ -183,7 +187,7 @@ DRESULT disk_write (
 			{
 				/* Check if the Transfer is finished */
 				SD_state=SD_WaitWriteOperation();
-				printf("[%s][%d]\n",__FUNCTION__,__LINE__);
+				DISKIO_DEBUG("\n");
 				/* Wait until end of DMA transfer */
 				while(SD_GetStatus() != SD_TRANSFER_OK);			
 			}

@@ -1178,6 +1178,9 @@ static void xSDcard_Task(void){
 	Fatfs_Init();
 	Fatfs_Write_Test();
 	Fatfs_Read_Test();
+	SD_Test();
+
+
 	while(1){
 			LED_PURPLE
 			//vTaskDelay(1000);
