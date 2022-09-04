@@ -199,8 +199,11 @@ void  BASIC_TIM_IRQHandler (void)
  */
 void SDIO_IRQHandler(void) 
 {
+	uint32_t ulReturn;
+	ulReturn = taskENTER_CRITICAL_FROM_ISR();
   /* Process All SDIO Interrupt Sources */
-  SD_ProcessIRQSrc();
+  	SD_ProcessIRQSrc();
+  	taskEXIT_CRITICAL_FROM_ISR( ulReturn );
 }
 
 /******************************************************************************/

@@ -1179,7 +1179,7 @@ static void xSDcard_Task(void){
 			//vTaskDelay(1000);
 			printf("xSDcard_Task\n");
 			//if()
-			// Fatfs_Test();
+			 Fatfs_Test();
 			LED_YELLOW
 			vTaskDelay(3000);
 	
