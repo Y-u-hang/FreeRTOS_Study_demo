@@ -31,7 +31,7 @@
 #include "sdio/bsp_sdio_sdcard.h"
 //#include "ff.h"
 #include "fatfs.h"
-
+#include "command.h"
 // #include "timers.h"
 /******************************* 宏定义 ************************************/
 /*
@@ -1096,40 +1096,14 @@ static void Debug_Dma(void* parameter)
                               portMAX_DELAY); /* 等待时间 */
     if(pdPASS == xReturn)
     {
-      printf("收到数据:%s\n",Usart_Rx_Buf);
-	  if (strcmp(CPU_Using, Usart_Rx_Buf) == 0){
-		printf("yes\r\n");
-		CPU_Percent();	
-	  }
-      memset(Usart_Rx_Buf,0,USART_RBUFF_SIZE);/* 清零 */
+      printf("收到指令:%s\n",Usart_Rx_Buf);
+	  RunComFun();
+
       LED2_TOGGLE;
     }
   }
 }
-static void CPU_Percent(void)
-{
 
-	uint8_t CPU_RunInfo[400];	  //保存任务运行时间信息
-
-    memset(CPU_RunInfo,0,400);				//信息缓冲区清零
-    
-    vTaskList((char *)&CPU_RunInfo);  //获取任务运行时间信息
-    
-    printf("---------------------------------------------\r\n");
-    printf("任务名      任务状态 优先级   剩余栈 任务序号\r\n");
-    printf("%s", CPU_RunInfo);
-    printf("---------------------------------------------\r\n");
-    
-    memset(CPU_RunInfo,0,400);				//信息缓冲区清零
-    
-    vTaskGetRunTimeStats((char *)&CPU_RunInfo);
-    
-    printf("任务名       运行计数         使用率\r\n");
-    printf("%s", CPU_RunInfo);
-    printf("---------------------------------------------\r\n\n");
-
-
-}
 static void CPU_Task(void* parameter)
 {	
   uint8_t CPU_RunInfo[400];		//保存任务运行时间信息
