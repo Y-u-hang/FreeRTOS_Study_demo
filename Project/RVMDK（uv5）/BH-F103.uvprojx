@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD, USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase;..\..\User\FATFS;..\..\User\FATFS\option;..\..\User\fat</IncludePath>
+              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase;..\..\User\FATFS;..\..\User\FATFS\option;..\..\User\fat;..\..\User\command</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -677,6 +677,16 @@
               <FileName>log.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\User\log.h</FilePath>
+            </File>
+            <File>
+              <FileName>command.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\command\command.c</FilePath>
+            </File>
+            <File>
+              <FileName>command.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\command\command.h</FilePath>
             </File>
           </Files>
         </Group>
