@@ -28,7 +28,8 @@
 #include "FreeRTOS.h"					//FreeRTOS  
 #include "task.h" 
 #include "bsp_TiMbase.h"
-
+#include "bsp_can.h" 
+#include "semphr.h"
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
   */
@@ -204,6 +205,35 @@ void SDIO_IRQHandler(void)
   /* Process All SDIO Interrupt Sources */
   	SD_ProcessIRQSrc();
   	taskEXIT_CRITICAL_FROM_ISR( ulReturn );
+}
+
+
+extern __IO uint32_t flag ;		 //用于标志是否接收到数据，在中断函数中赋值
+extern CanRxMsg RxMessage;				 //接收缓冲区
+extern SemaphoreHandle_t BinarySem_Can_Receive;
+
+void CAN_RX_IRQHandler(void)
+{
+	uint32_t ulReturn;
+	BaseType_t pxHigherPriorityTaskWoken;
+	
+  /* 进入临界段，临界段可以嵌套 */
+  ulReturn = taskENTER_CRITICAL_FROM_ISR();
+	
+	/*从邮箱中读出报文*/
+	CAN_Receive(CANx, CAN_FIFO0, &RxMessage);
+
+	/* 比较ID是否为0x1314 */ 
+	if((RxMessage.ExtId==0x1314) && (RxMessage.IDE==CAN_ID_EXT) && (RxMessage.DLC==8) )
+	{
+		//给出二值信号量 ，发送接收到新数据标志，供前台程序查询
+		xSemaphoreGiveFromISR(BinarySem_Can_Receive,&pxHigherPriorityTaskWoken);	//释放二值信号量
+		//如果需要的话进行一次任务切换，系统会判断是否需要进行切换
+		portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+	}
+	
+  /* 退出临界段 */
+  taskEXIT_CRITICAL_FROM_ISR( ulReturn );
 }
 
 /******************************************************************************/

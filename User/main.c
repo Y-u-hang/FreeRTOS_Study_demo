@@ -32,6 +32,7 @@
 //#include "ff.h"
 #include "fatfs.h"
 #include "command.h"
+#include "bsp_can.h"
 // #include "timers.h"
 /******************************* 宏定义 ************************************/
 /*
@@ -86,12 +87,11 @@ static TaskHandle_t HighPriority_Task_Handle = NULL;
 static TaskHandle_t Receive1_Task_Handle = NULL;/* Receive1_Task任务句柄 */
 static TaskHandle_t Receive2_Task_Handle = NULL;/* Receive2_Task任务句柄 */
 static TaskHandle_t Send_Task_Notify_Handle = NULL;/* Send_Task任务句柄 */
-static TaskHandle_t Debug_Dma_Handle = NULL;/* Send_Task任务句柄 */
-
 static TaskHandle_t CPU_Task_Handle = NULL;/* Send_Task任务句柄 */
-
-
+static TaskHandle_t Test_Task_Handle = NULL;/* Test_Task任务句柄 */
 static TaskHandle_t xSDcard_Task_Handle = NULL;/* xSDcard_Task任务句柄 */
+
+
 
 /********************************** 内核对象句柄 *********************************/
 /*
@@ -114,8 +114,8 @@ static TimerHandle_t Swtmr1_Handle =NULL;   /* 软件定时器句柄 */
 static TimerHandle_t Swtmr2_Handle =NULL;   /* 软件定时器句柄 */
 
 SemaphoreHandle_t BinarySem_Debug_Dma =NULL;	// 二值信号量
-
-
+SemaphoreHandle_t BinarySem_Can_Receive =NULL;	// 二值信号量
+SemaphoreHandle_t BinarySem_Can_Send =NULL;	// 二值信号量
 
 /******************************* 全局变量声明 ************************************/
 /*
@@ -146,6 +146,11 @@ SemaphoreHandle_t BinarySem_Debug_Dma =NULL;	// 二值信号量
 static uint32_t TmrCb_Count1 = 0; /* 记录软件定时器1回调函数执行次数 */
 static uint32_t TmrCb_Count2 = 0; /* 记录软件定时器2回调函数执行次数 */
 
+
+__IO uint32_t flag = 0; 	 //用于标志是否接收到数据，在中断函数中赋值
+CanTxMsg TxMessage; 			 //发送缓冲区
+CanRxMsg RxMessage; 			 //接收缓冲区
+
 /*
 *************************************************************************
 *                             函数声明
@@ -168,18 +173,14 @@ static void HighPriority_Task(void* parameter);
 static void Receive1_Task(void* pvParameters);/* Receive1_Task任务实现 */
 static void Receive2_Task(void* pvParameters);/* Receive2_Task任务实现 */
 static void Send_Task_Notify(void* pvParameters);/* Send_Task任务实现 */
-
 static void xTaskNotifyDemo(void);
-
 static void xTimerDemo(void);
 static void Swtmr1_Callback(void* parameter);
 static void Swtmr2_Callback(void* parameter);
-static void Debug_Dma(void* parameter);
-
 static void CPU_Task(void* parameter);
 static void xSDcardDemo(void);
 static void xSDcard_Task(void);
-
+static void xTest_Task(void);
 
 void CPU_Percent(void);
 
@@ -271,8 +272,10 @@ static void BSP_Init(void)
 	Key_GPIO_Config();
 
 	/* 基本定时器初始化   */
-	  BASIC_TIM_Init();
+	BASIC_TIM_Init();
 	
+	/*初始化can,在中断接收CAN数据包*/
+	CAN_Config();
 
 
 	//LED1_ON;
@@ -290,10 +293,7 @@ static void AppTaskCreate(void)
   BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
 
   taskENTER_CRITICAL();           //进入临界区
-  /* 创建 BinarySem */
-  BinarySem_Debug_Dma = xSemaphoreCreateBinary();	 
-  if(NULL != BinarySem_Debug_Dma)
-    printf("BinarySem_Debug_Dma二值信号量创建成功!\r\n");
+
 
   /* 创建LED_Task任务 */
 //  静态创建任务
@@ -399,28 +399,18 @@ static void AppTaskCreate(void)
   	if(pdPASS == xReturn)
     	printf("创建Give_Task任务成功!\n\n");
 
-
-	/* 创建Give_Task任务 */
-	xReturn = xTaskCreate((TaskFunction_t )Debug_Dma,  /* 任务入口函数 */
-						  (const char*	  )"Debug_Dma",/* 任务名字 */
+	/* 创建Test_Task任务 */
+	xReturn = xTaskCreate((TaskFunction_t )xTest_Task,  /* 任务入口函数 */
+						  (const char*	  )"Test_Task",/* 任务名字 */
 						  (uint16_t 	  )512,  /* 任务栈大小 */
 						  (void*		  )NULL,/* 任务入口函数参数 */
 						  (UBaseType_t	  )8, /* 任务的优先级 */
-						  (TaskHandle_t*  )&Debug_Dma_Handle);/* 任务控制块指针 */ 
+						  (TaskHandle_t*  )&Test_Task_Handle);/* 任务控制块指针 */ 
 	  if(pdPASS == xReturn)
-		  printf("创建Debug_Dma任务成功!\n\n");
+		  printf("创建Test_Task任务成功!\n\n");
 
-//	 xReturn = xTaskCreate((TaskFunction_t )CPU_Task, /* 任务入口函数 */
-//						   (const char*    )"CPU_Task",/* 任务名字 */
-//						   (uint16_t	   )512,   /* 任务栈大小 */
-//						   (void*		   )NULL,  /* 任务入口函数参数 */
-//						   (UBaseType_t    )4,	   /* 任务的优先级 */
-//						   (TaskHandle_t*  )&CPU_Task_Handle);/* 任务控制块指针 */
-//	 if(pdPASS == xReturn)
-//	   printf("创建CPU_Task任务成功!\r\n");
-
-	 // MuxSemHandleDemo();
-	 xTaskNotifyDemo();
+	// MuxSemHandleDemo();
+	xTaskNotifyDemo();
 	xTimerDemo();
 	xSDcardDemo();
 	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
@@ -701,14 +691,6 @@ static void MuxSemHandleDemo(void)
 }
 static void xTaskNotifyDemo(void){
 
-	/*任务通知代替消息队列、事件组*/ 
-	// xTaskNotify()
-	//xTaskNotifyWait()
-	
-	/*任务通知代替二值信号量、计数信号量*/ 
-	// xTaskNotifyGive()
-	// ulTaskNotifyTake()
-	
 	BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
 	
 	/* 创建Receive1_Task任务 */
@@ -1079,31 +1061,6 @@ static void xTimerDemo(void){
 
 }
 
-/**********************************************************************
-  * @ 函数名  ： LED_Task
-  * @ 功能说明： LED_Task任务主体
-  * @ 参数    ：   
-  * @ 返回值  ： 无
-  ********************************************************************/
-static void Debug_Dma(void* parameter)
-{	
-	char* CPU_Using = "CPU";
-	BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
-  while (1)
-  {
-    //获取二值信号量 xSemaphore,没获取到则一直等待
-		xReturn = xSemaphoreTake(BinarySem_Debug_Dma,/* 二值信号量句柄 */
-                              portMAX_DELAY); /* 等待时间 */
-    if(pdPASS == xReturn)
-    {
-      printf("收到指令:%s\n",Usart_Rx_Buf);
-	  RunComFun();
-
-      LED2_TOGGLE;
-    }
-  }
-}
-
 static void CPU_Task(void* parameter)
 {	
   uint8_t CPU_RunInfo[400];		//保存任务运行时间信息
@@ -1168,6 +1125,75 @@ static void xSDcard_Task(void){
 
 }
 
+
+
+
+/**********************************************************************
+  * @ 函数名  ： xTest_Task
+  * @ 功能说明： xTest_Task任务主体
+  * @ 参数    ：   
+  * @ 返回值  ： 无
+  * @ 描述 ： 后续所有测试 demo 可以丢在这里面测试 不要增加太多Task
+  ********************************************************************/
+static void xTest_Task()
+{	
+	BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
+
+  /* 创建 BinarySem */
+	BinarySem_Can_Receive = xSemaphoreCreateBinary();	 
+	if(NULL != BinarySem_Can_Receive)
+    printf("BinarySem_Can_Receive二值信号量创建成功!\r\n");
+  
+	BinarySem_Debug_Dma = xSemaphoreCreateBinary();	 
+	if(NULL != BinarySem_Can_Receive)
+    printf("BinarySem_Can_Receive二值信号量创建成功!\r\n");
+
+
+  while (1)
+  {
+    //获取二值信号量 xSemaphore,没获取到则一直等待
+
+	xReturn = xSemaphoreTake(BinarySem_Debug_Dma,/* 二值信号量句柄 */
+							portMAX_DELAY); /* 等待时间 */
+    if(pdPASS == xReturn)
+    {
+      printf("收到指令:%s\n",Usart_Rx_Buf);
+	  RunComFun();
+	  // 当有串口指令输入时 便会向CAN回路发送消息
+	  CAN_SetMsg(&TxMessage);  
+	  CAN_Transmit(CANx, &TxMessage);  
+	  vTaskDelay(10);//等待发送完毕，可使用CAN_TransmitStatus查看状态  
+	  LED_GREEN; 
+	  printf("\r\n已使用CAN发送数据包！\r\n"); 		
+	  printf("\r\n发送的报文内容为：\r\n");
+	  printf("\r\n 扩展ID号ExtId：0x%x \r\n",TxMessage.ExtId);
+	  CAN_DEBUG_ARRAY(TxMessage.Data,8); 
+
+      LED2_TOGGLE;
+    }
+	
+	xReturn = xSemaphoreTake(BinarySem_Can_Receive,/* 二值信号量句柄 */
+                              portMAX_DELAY); /* 等待时间 */
+	if(pdPASS == xReturn)
+	{   
+		printf("\r\nCAN接收到数据：\r\n");	  
+		CAN_DEBUG_ARRAY(RxMessage.Data,8); 
+	}
+
+//	xReturn = xSemaphoreTake(BinarySem_Can_Send,/* 二值信号量句柄 */
+//                              portMAX_DELAY); /* 等待时间 */
+//	if(pdPASS == xReturn)
+//	{   
+//
+//
+//	}
+
+
+
+	
+
+  }
+}
 
 // 静态创建你任务时需要	
 

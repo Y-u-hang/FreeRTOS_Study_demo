@@ -1,7 +1,9 @@
 ﻿#include "FreeRTOS.h"	
 #include "task.h"
 #include "command.h"
+#include "stdio.h"
 
+#include "semphr.h"
 typedef struct Command_Function{
 	char* Command;
 	void (*pFunction)();
@@ -9,10 +11,11 @@ typedef struct Command_Function{
 }Com_Fun;
 	
 	
-#define COM_MAX 1
+#define COM_MAX 2
 const Com_Fun gCom_Fun[COM_MAX] = {
 	// COMMAND FUNCTION
 	"CPU", CPU_Percent,
+	"cantest", CAN_Test,
 };
 
 
@@ -56,5 +59,8 @@ void CPU_Percent(void)
 
 
 }
-
-
+extern SemaphoreHandle_t BinarySem_Can_Send;
+void CAN_Test(){
+	printf("开始发送\n");
+	//xSemaphoreGive(BinarySem_Can_Send);
+}

@@ -9,6 +9,7 @@ export "C" {
 
 void CPU_Percent(void);
 bool RunComFun(void);
+void CAN_Test(void);
 
 
 
