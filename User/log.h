@@ -51,7 +51,10 @@ extern "C" {
 #define FF_WARNING log_warn
 #define FF_ERROR log_error
 
-			
+#define MAIN_DEBUG log_debug
+#define MAIN_INFO log_info
+#define MAIN_WARNING log_warn
+#define MAIN_ERROR log_error	
 
 #ifdef __cplusplus
 }

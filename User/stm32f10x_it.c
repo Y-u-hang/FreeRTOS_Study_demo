@@ -227,6 +227,7 @@ void CAN_RX_IRQHandler(void)
 	if((RxMessage.ExtId==0x1314) && (RxMessage.IDE==CAN_ID_EXT) && (RxMessage.DLC==8) )
 	{
 		//给出二值信号量 ，发送接收到新数据标志，供前台程序查询
+		printf("[%s][%d]\n", __FUNCTION__, __LINE__);
 		xSemaphoreGiveFromISR(BinarySem_Can_Receive,&pxHigherPriorityTaskWoken);	//释放二值信号量
 		//如果需要的话进行一次任务切换，系统会判断是否需要进行切换
 		portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);

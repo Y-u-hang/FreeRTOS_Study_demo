@@ -153,7 +153,7 @@ void SD_SingleBlockTest(void)
 	while(SD_GetStatus() != SD_TRANSFER_OK);
 //	int i =1;
 //	while(!((i --) ||  (SD_GetStatus() != SD_TRANSFER_OK)))
-	SDIO_ERROR("SD_SingleBlockTest测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
+	//SDIO_ERROR("SD_SingleBlockTest测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
 
   }
 
@@ -166,7 +166,7 @@ void SD_SingleBlockTest(void)
 	while(SD_GetStatus() != SD_TRANSFER_OK);	
 //	int i =1;
 //	while(!((i --) ||  (SD_GetStatus() != SD_TRANSFER_OK)))
-	SDIO_ERROR("SD_SingleBlockTest测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
+	//SDIO_ERROR("SD_SingleBlockTest测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
 
   }
 
@@ -223,7 +223,7 @@ void SD_MultiBlockTest(void)
 //	int i =1;
 //	while(!((i --) ||  (SD_GetStatus() != SD_TRANSFER_OK)))
 	while(SD_GetStatus() != SD_TRANSFER_OK);
-	printf("SD_MultiBlockTest 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
+	//printf("SD_MultiBlockTest 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
 
   }
 

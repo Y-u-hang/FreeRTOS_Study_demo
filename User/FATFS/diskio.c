@@ -220,6 +220,7 @@ DRESULT disk_ioctl (
 )
 {
 	DRESULT status = RES_PARERR;
+	SDIO_DEBUG("\n");
 	switch (pdrv) {	// 根据设备的类型
 		case ATA:	/* SD CARD */
 			switch (cmd) 

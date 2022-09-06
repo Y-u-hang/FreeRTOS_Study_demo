@@ -166,6 +166,7 @@ void Uart_DMA_Rx_Data(void)
 	*/
 	
 	
+	printf("[%s][%d]\n", __FUNCTION__, __LINE__);
 	//给出二值信号量 ，发送接收到新数据标志，供前台程序查询
 	xSemaphoreGiveFromISR(BinarySem_Debug_Dma,&pxHigherPriorityTaskWoken);	//释放二值信号量
   //如果需要的话进行一次任务切换，系统会判断是否需要进行切换

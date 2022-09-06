@@ -235,7 +235,7 @@
 #define SD_STD_CAPACITY                 ((uint32_t)0x00000000)
 #define SD_CHECK_PATTERN                ((uint32_t)0x000001AA)
 
-#define SD_MAX_VOLT_TRIAL               ((uint32_t)0x0000FFFF)
+#define SD_MAX_VOLT_TRIAL               ((uint32_t)0x000000FF)	// 0x0000FFFF
 #define SD_ALLZERO                      ((uint32_t)0x00000000)
 
 #define SD_WIDE_BUS_SUPPORT             ((uint32_t)0x00040000)
@@ -511,7 +511,7 @@ SD_Error SD_Init(void)
    * 上电识别，卡初始化都完成后，进入数据传输模式，提高读写速度
    * 速度若超过24M要进入bypass模式 
    */
-  printf("CD card init OK \n");
+  SDIO_DEBUG("CD card init OK \n");
   /* SDIOCLK = HCLK, SDIO_CK = HCLK/(2 + SDIO_TRANSFER_CLK_DIV) */  
   SDIO_InitStructure.SDIO_ClockDiv = SDIO_TRANSFER_CLK_DIV;
 
@@ -529,7 +529,7 @@ SD_Error SD_Init(void)
 
 	/* 硬件流，若开启，在FIFO不能进行发送和接收数据时，数据传输暂停 */
   SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HardwareFlowControl_Disable; 
-	printf("更新SDIO配置\n");
+	SDIO_DEBUG("更新SDIO配置\n");
   SDIO_Init(&SDIO_InitStructure);
   
   if (errorstatus == SD_OK)
@@ -538,7 +538,7 @@ SD_Error SD_Init(void)
 		  
     errorstatus = SD_GetCardInfo(&SDCardInfo);	
   }
-	printf("get card info is OK\n");
+	SDIO_DEBUG("get card info is OK\n");
   if (errorstatus == SD_OK)
   {
     /* 通过cmd7  ,rca选择要操作的卡 */
@@ -549,7 +549,7 @@ SD_Error SD_Init(void)
   {
 			/* 最后为了提高读写，开启4bits模式 */
     errorstatus = SD_EnableWideBusOperation(SDIO_BusWide_4b);
-	printf("errorstatus is %d\n", errorstatus);
+	SDIO_DEBUG("errorstatus is %d\n", errorstatus);
   }  
 
   return(errorstatus);
@@ -617,6 +617,7 @@ SD_Error SD_PowerON(void)
   SD_Error errorstatus = SD_OK;
   uint32_t response = 0, count = 0, validvoltage = 0;
   uint32_t SDType = SD_STD_CAPACITY;
+  uint32_t i = 20;
 	
 /********************************************************************************************************/
   /* 上电初始化 
@@ -695,7 +696,7 @@ SD_Error SD_PowerON(void)
    
   /*检查是否接收到命令*/
   errorstatus = CmdResp7Error(); 
-	
+	while(i -- );
 	/* 有响应则card遵循sd协议2.0版本 */
   if (errorstatus == SD_OK)	  	
   {
@@ -738,7 +739,7 @@ SD_Error SD_PowerON(void)
 	 */
   if (errorstatus == SD_OK)	//响应了cmd55，是sd卡，可能为1.x,可能为2.0
   {
-  		SDIO_DEBUG("the card is cd card \n");
+  	SDIO_DEBUG("the card is cd card \n");
   	/*下面开始循环地发送sdio支持的电压范围，循环一定次数*/
 
     /* SD CARD
@@ -769,6 +770,7 @@ SD_Error SD_PowerON(void)
 			 * 1:SDHC
        * 响应：R3,对应的是OCR寄存器			
 			 */			
+      //SDIO_CmdInitStructure.SDIO_Argument = 0x40200000;	
       SDIO_CmdInitStructure.SDIO_Argument = SD_VOLTAGE_WINDOW_SD | SDType;	  
       SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SD_APP_OP_COND;
       SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;  
@@ -782,25 +784,23 @@ SD_Error SD_PowerON(void)
       {
         return(errorstatus); 
       }
-	  SDIO_DEBUG("the validvoltage is OK \n");
-			
 			/* 若卡需求电压在SDIO的供电电压范围内，会自动上电并标志pwr_up位 
 			 * 读取卡寄存器，卡状态
 			 */
       response = SDIO_GetResponse(SDIO_RESP1);
 			
 			/* 读取卡的ocr寄存器的pwr_up位，看是否已工作在正常电压 */
-	  SDIO_DEBUG(".");
+	  SDIO_DEBUG(". 0X%X\n", count);
       validvoltage = (((response >> 31) == 1) ? 1 : 0);	
       count++;			  /* 计算循环次数 */
     }
-		SDIO_DEBUG("\n 工作电压已就绪\n");
     if (count >= SD_MAX_VOLT_TRIAL)					 /* 循环检测超过一定次数还没上电 */
     {
       errorstatus = SD_INVALID_VOLTRANGE;	   /* SDIO不支持card的供电电压 */
+	  SDIO_ERROR("电压不支持 SD 电压 0X%X\n", (response & 0x00FFFFFF));
       return(errorstatus);
     }
-		
+	SDIO_INFO(" SD 电压 0X%X\n", (response & 0x00FFFFFF));
 		/*检查卡返回信息中的HCS位*/
 		/* 判断ocr中的ccs位 ，如果是sdsc卡则不执行下面的语句 */
     if (response &= SD_HIGH_CAPACITY)       
@@ -1550,19 +1550,19 @@ SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint64_t ReadAddr, uint16_t Block
   */
 SD_Error SD_WaitReadOperation(void)
 {
-  SD_Error errorstatus = SD_OK;
+  	SD_Error errorstatus = SD_OK;
 		  //等待dma传输结束
-  while ((SD_DMAEndOfTransferStatus() == RESET) && (TransferEnd == 0) && (TransferError == SD_OK))
-  {
+  	while ((SD_DMAEndOfTransferStatus() == RESET) && (TransferEnd == 0) && (TransferError == SD_OK))
+  	{
 		printf(".");
-  }
+  	}
+	printf("\n");
+  	if (TransferError != SD_OK)
+  	{
+    	return(TransferError);
+  	}
 
-  if (TransferError != SD_OK)
-  {
-    return(TransferError);
-  }
-
-  return(errorstatus);
+  	return(errorstatus);
 }
 
 /**
@@ -1754,7 +1754,7 @@ SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint64_t WriteAddr, uint16_t Bl
     /*******************add，没有这一段容易卡死在DMA检测中*************************************/
     /*!< Set Block Size for Card，cmd16,若是sdsc卡，可以用来设置块大小，若是sdhc卡，块大小为512字节，不受cmd16影响 */
   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
-  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
+  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;	//16	
   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;   //r1
   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;

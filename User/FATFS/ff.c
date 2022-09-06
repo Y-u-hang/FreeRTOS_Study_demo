@@ -2482,7 +2482,7 @@ FRESULT f_mount (
 	FatFs[vol] = fs;					/* Register new fs object */
 
 	if (!fs || opt != 1) return FR_OK;	/* Do not mount now, it will be mounted later */
-
+	FF_DEBUG("\n");
 	res = find_volume(&fs, &path, 0);	/* Force mounted the volume */
 	LEAVE_FF(fs, res);
 }
@@ -4175,6 +4175,7 @@ FRESULT f_mkfs (
 		b_vol = LD_DWORD(tbl + 8);	/* Volume start sector */
 		n_vol = LD_DWORD(tbl + 12);	/* Volume size */
 	} else {
+		FF_DEBUG("\n");
 		/* Create a partition in this function */
 		if (disk_ioctl(pdrv, GET_SECTOR_COUNT, &n_vol) != RES_OK || n_vol < 128)
 			return FR_DISK_ERR;
@@ -4317,6 +4318,7 @@ FRESULT f_mkfs (
 
 	/* Initialize FAT area */
 	wsect = b_fat;
+	FF_DEBUG("\n");
 	for (i = 0; i < N_FATS; i++) {		/* Initialize each FAT copy */
 		mem_set(tbl, 0, SS(fs));			/* 1st sector of the FAT  */
 		n = md;								/* Media descriptor byte */
@@ -4337,7 +4339,7 @@ FRESULT f_mkfs (
 				return FR_DISK_ERR;
 		}
 	}
-
+	FF_DEBUG("\n");
 	/* Initialize root directory */
 	i = (fmt == FS_FAT32) ? au : (UINT)n_dir;
 	do {
