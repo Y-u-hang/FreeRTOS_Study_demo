@@ -1104,12 +1104,13 @@ static void xSDcard_Task(void){
 	Fatfs_Init();
 	Fatfs_Write_Test();
 	Fatfs_Read_Test();
-	SD_Test();
+	// SD_Test();
 
 	while(1) {
-		
+
 		LED_PURPLE
-		MAIN_INFO("xSDcard_Task\n");			 
+		MAIN_INFO("xSDcard_Task\n");
+		// PC11
 		LED_YELLOW
 		vTaskDelay(3000);
 	}

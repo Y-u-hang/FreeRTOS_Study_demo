@@ -2280,7 +2280,7 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 	FF_DEBUG("\n");
     /* 2.2 check_fs()函数会把磁盘的第1个扇区(就是MBR)读入到fs->win[]数组中, 判断MBR是否是合法的MBR*/
 	fmt = check_fs(fs, bsect);					/* Load sector 0 and check if it is an FAT boot sector as SFD */
-	FF_DEBUG("\n");
+	FF_INFO("fmt is %d\n", fmt);
 
 	if (fmt == 1 || (!fmt && (LD2PT(vol)))) {	// 不是FAT的根分区 或者强制分区号/* Not an FAT boot sector or forced partition number */
 		// 03点14分 TAG

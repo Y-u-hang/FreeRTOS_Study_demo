@@ -2841,6 +2841,21 @@ uint8_t convert_from_bytes_to_power_of_two(uint16_t NumberOfBytes)
   return(count);
 }
 
-
+// 这个开发板没有 CD的引脚
+//uint8_t SD_Detect(void)
+//{
+//	__IO uint8_t status = SD_PRESENT;
+//	if(GPIO_ReadInputDataBit(SD_DETECT_GPIO_PORT, SD_DETECT_PIN) != Bit_reset) {
+//
+//		status = SD_NOT_PRESENT;
+//	}
+//	return status;
+//  判断某一个PIN 输入的 高低
+//		if(GPIOC->IDR& GPIO_IDR_IDR11) {
+//			MAIN_INFO("PIN11 为高\n");
+//		}else{
+//			MAIN_INFO("PIN11 为低\n");
+//		}
+// }
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
