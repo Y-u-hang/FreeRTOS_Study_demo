@@ -278,8 +278,8 @@ static void BSP_Init(void)
 	CAN_Config();
 
 	MAIN_INFO("BSP初始化完成 \n");
-	//LED1_ON;
-	//printf(" yuahng usart init ok!\n");
+
+	MAIN_WARNING("\n\n生日快乐\n\n");
 }
 
 /***********************************************************************
