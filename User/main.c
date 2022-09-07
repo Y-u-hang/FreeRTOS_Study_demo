@@ -277,7 +277,7 @@ static void BSP_Init(void)
 	/*初始化can,在中断接收CAN数据包*/
 	CAN_Config();
 
-
+	MAIN_INFO("BSP初始化完成 \n");
 	//LED1_ON;
 	//printf(" yuahng usart init ok!\n");
 }
@@ -1089,43 +1089,32 @@ static void CPU_Task(void* parameter)
 
 static void xSDcardDemo(void){
 	BaseType_t xReturn = pdPASS;
-		//SD_Test();
-		
-		xReturn = xTaskCreate((TaskFunction_t )xSDcard_Task, /* 任务入口函数 */
-								(const char*	)"xSDcard_Task",/* 任务名字 */
-								(uint16_t		)2048,	/* 任务栈大小 */
-								(void*			)NULL,	/* 任务入口函数参数 */
-								(UBaseType_t	)20, 	/* 任务的优先级 */
-								(TaskHandle_t*	)&xSDcard_Task_Handle);/* 任务控制块指针 */
-		if(pdPASS == xReturn)
-			printf("创建xSDcard_Task任务成功!\r\n");
-
-
-
-
+	xReturn = xTaskCreate((TaskFunction_t )xSDcard_Task, /* 任务入口函数 */
+							(const char*	)"xSDcard_Task",/* 任务名字 */
+							(uint16_t		)2048,	/* 任务栈大小 */
+							(void*			)NULL,	/* 任务入口函数参数 */
+							(UBaseType_t	)20, 	/* 任务的优先级 */
+							(TaskHandle_t*	)&xSDcard_Task_Handle);/* 任务控制块指针 */
+	if(pdPASS == xReturn)
+	printf("创建xSDcard_Task任务成功!\r\n");
 }
 
 static void xSDcard_Task(void){
+
 	Fatfs_Init();
 	Fatfs_Write_Test();
 	Fatfs_Read_Test();
 	SD_Test();
 
-
-	while(1){
-			LED_PURPLE
-			//vTaskDelay(1000);
-			printf("xSDcard_Task\n");
-			//if()
-			 
-			LED_YELLOW
-			vTaskDelay(3000);
-	
+	while(1) {
+		
+		LED_PURPLE
+		MAIN_INFO("xSDcard_Task\n");			 
+		LED_YELLOW
+		vTaskDelay(3000);
 	}
 
 }
-
-
 
 
 /**********************************************************************
@@ -1139,60 +1128,44 @@ static void xTest_Task()
 {	
 	BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
 
-  /* 创建 BinarySem */
+	/* 创建 BinarySem */
 	BinarySem_Can_Receive = xSemaphoreCreateBinary();	 
 	if(NULL != BinarySem_Can_Receive)
-    printf("BinarySem_Can_Receive二值信号量创建成功!\r\n");
+    MAIN_INFO("BinarySem_Can_Receive二值信号量创建成功!\r\n");
   
 	BinarySem_Debug_Dma = xSemaphoreCreateBinary();	 
 	if(NULL != BinarySem_Can_Receive)
-    printf("BinarySem_Can_Receive二值信号量创建成功!\r\n");
+    MAIN_INFO("BinarySem_Can_Receive二值信号量创建成功!\r\n");
 
-
-  while (1)
-  {
-    //获取二值信号量 xSemaphore,没获取到则一直等待
-
-	xReturn = xSemaphoreTake(BinarySem_Debug_Dma,/* 二值信号量句柄 */
-							portMAX_DELAY); /* 等待时间 */
-    if(pdPASS == xReturn)
-    {
-      printf("收到指令:%s\n",Usart_Rx_Buf);
-	  RunComFun();
-	  // 当有串口指令输入时 便会向CAN回路发送消息
-	  CAN_SetMsg(&TxMessage);  
-	  CAN_Transmit(CANx, &TxMessage);  
-	  vTaskDelay(10);//等待发送完毕，可使用CAN_TransmitStatus查看状态  
-	  LED_GREEN; 
-	  printf("\r\n已使用CAN发送数据包！\r\n"); 		
-	  printf("\r\n发送的报文内容为：\r\n");
-	  printf("\r\n 扩展ID号ExtId：0x%x \r\n",TxMessage.ExtId);
-	  CAN_DEBUG_ARRAY(TxMessage.Data,8); 
-
-      LED2_TOGGLE;
-    }
-	
-	xReturn = xSemaphoreTake(BinarySem_Can_Receive,/* 二值信号量句柄 */
-                              portMAX_DELAY); /* 等待时间 */
-	if(pdPASS == xReturn)
-	{   
-		printf("\r\nCAN接收到数据：\r\n");	  
-		CAN_DEBUG_ARRAY(RxMessage.Data,8); 
+	while (1)
+	{
+	    //获取二值信号量 xSemaphore,没获取到则一直等待
+		xReturn = xSemaphoreTake(BinarySem_Debug_Dma,/* 二值信号量句柄 */
+								portMAX_DELAY); /* 等待时间 */
+		if(pdPASS == xReturn)
+		{
+			MAIN_INFO("收到指令:%s\n", Usart_Rx_Buf);
+			RunComFun();
+		  	// 当有串口指令输入时 便会向CAN回路发送消息
+		  	CAN_SetMsg(&TxMessage);  
+		  	CAN_Transmit(CANx, &TxMessage);  
+		  	vTaskDelay(10);//等待发送完毕，可使用CAN_TransmitStatus查看状态  
+		  	LED_GREEN; 
+			MAIN_INFO("\r\n已使用CAN发送数据包！\r\n"); 		
+			MAIN_INFO("\r\n发送的报文内容为：\r\n");
+			MAIN_INFO("\r\n 扩展ID号ExtId：0x%x \r\n",TxMessage.ExtId);
+			CAN_DEBUG_ARRAY(TxMessage.Data, 8); 
+			LED2_TOGGLE;
+	    }
+		
+		xReturn = xSemaphoreTake(BinarySem_Can_Receive,/* 二值信号量句柄 */
+	                              portMAX_DELAY); /* 等待时间 */
+		if(pdPASS == xReturn)
+		{   
+			MAIN_INFO("\r\nCAN接收到数据：\r\n");	  
+			CAN_DEBUG_ARRAY(RxMessage.Data,8); 
+		}
 	}
-
-//	xReturn = xSemaphoreTake(BinarySem_Can_Send,/* 二值信号量句柄 */
-//                              portMAX_DELAY); /* 等待时间 */
-//	if(pdPASS == xReturn)
-//	{   
-//
-//
-//	}
-
-
-
-	
-
-  }
 }
 
 // 静态创建你任务时需要	

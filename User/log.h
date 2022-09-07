@@ -8,32 +8,32 @@ extern "C" {
 
 #include <stdio.h>
 
-#define LOG_RANK 0	//LOG 等级设定
+#define LOG_RANK 1	//LOG 等级设定
 #define DEBUG 0
 #define INFO 1
 #define WARNING 2
 #define ERROR 3
 
 #if (LOG_RANK == DEBUG)
-#define log_debug(fmt, ...) do{printf("[DEBUG][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
-#define log_info(fmt, ...) do{printf("[INFO][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
-#define log_warn(fmt, ...) do{printf("[WARNING][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
-#define log_error(fmt, ...) do{printf("[ERROR][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_debug(fmt, ...) do{printf("[%s][DEBUG][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_info(fmt, ...) do{printf("[%s][INFO][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_warn(fmt, ...) do{printf("[%s][WARNING][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_error(fmt, ...) do{printf("[%s][ERROR][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
 #elif (LOG_RANK == INFO)
 #define log_debug(...)
-#define log_info(fmt, ...) do{printf("[INFO][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
-#define log_warn(fmt, ...) do{printf("[WARNING][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
-#define log_error(fmt, ...) do{printf("[ERROR][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_info(fmt, ...) do{printf("[%s][INFO][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_warn(fmt, ...) do{printf("[%s][WARNING][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_error(fmt, ...) do{printf("[%s][ERROR][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
 #elif (LOG_RANK == WARNING)
 #define log_debug(...)
 #define log_info(...)
-#define log_warn(fmt, ...) do{printf("[WARNING][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
-#define log_error(fmt, ...) do{printf("[ERROR][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_warn(fmt, ...) do{printf("[%s][WARNING][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_error(fmt, ...) do{printf("[%s][ERROR][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
 #elif (LOG_RANK == ERROR)
 #define log_debug(...)
 #define log_info(...)
 #define log_warn(...)
-#define log_error(fmt, ...) do{printf("[ERROR][%s][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
+#define log_error(fmt, ...) do{printf("[%s][ERROR][%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__);}while(0)
 #endif
 
 #define SDIO_DEBUG log_debug

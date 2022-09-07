@@ -52,23 +52,6 @@ static TestStatus eBuffercmp(uint8_t* pBuffer, uint32_t BufferLength);
 
 void SD_Test(void)
 {
-  /*------------------------------ SD Init ---------------------------------- */
-	/* SD卡使用SDIO中断及DMA中断接收数据，中断服务程序位于bsp_sdio_sd.c文件尾*/
-//  if((Status = SD_Init()) != SD_OK)
-//  {    
-//		LED_RED;
-//    printf("SD卡初始化失败，请确保SD卡已正确接入开发板，或换一张SD卡测试！\n");
-//  }
-//  else
-//  {
-//    printf("SD卡初始化成功！\n");		 
-//  }
-//        
-//  if(Status == SD_OK) 
-//  {
-    //SDIO_INFO("\n SD card read \\ write \\erase test is start \n");
-	//LED_BLUE;
-    /*single block 读写测试*/
     SD_SingleBlockTest();
     
 	//暂不支持直接多块读写，多块读写可用多个单块读写流程代替
@@ -77,11 +60,8 @@ void SD_Test(void)
     SD_MultiBlockTest();
 	LED_BLUE;
 	/*擦除测试*/
-
 	SD_EraseTest();
 
-//  }
- 
 }
 
 
@@ -93,43 +73,42 @@ void SD_Test(void)
 void SD_EraseTest(void)
 {  
   /*------------------- Block Erase ------------------------------------------*/
-  if (Status == SD_OK)
-  {
-    /* Erase NumberOfBlocks Blocks of WRITE_BL_LEN(512 Bytes) */
-    Status = SD_Erase(0x00, (BLOCK_SIZE * NUMBER_OF_BLOCKS));
-  }
+  	if (Status == SD_OK)
+  	{
+    	/* Erase NumberOfBlocks Blocks of WRITE_BL_LEN(512 Bytes) */
+    	Status = SD_Erase(0x00, (BLOCK_SIZE * NUMBER_OF_BLOCKS));
+  	}
 	//printf("error is status %d\n",Status);
-  if (Status == SD_OK)
-  {
-    Status = SD_ReadMultiBlocks(Buffer_MultiBlock_Rx, 0x00, BLOCK_SIZE, NUMBER_OF_BLOCKS);
-	//printf("error is status %d\n",Status);
-    /* Check if the Transfer is finished */
-    Status = SD_WaitReadOperation();
-	//printf("error is status %d\n",Status);
-    /* Wait until end of DMA transfer */
-	// 等待传输完成
-    while(SD_GetStatus() != SD_TRANSFER_OK);
+  	if (Status == SD_OK)
+  	{
+    	Status = SD_ReadMultiBlocks(Buffer_MultiBlock_Rx, 0x00, BLOCK_SIZE, NUMBER_OF_BLOCKS);
+		//printf("error is status %d\n",Status);
+    	/* Check if the Transfer is finished */
+    	Status = SD_WaitReadOperation();
+		//printf("error is status %d\n",Status);
+   		/* Wait until end of DMA transfer */
+		// 等待传输完成
+	    while(SD_GetStatus() != SD_TRANSFER_OK);
+	}
+	//printf("Single block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
 
-  }
-  //printf("Single block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
-
-  /* Check the correctness of erased blocks */
-  if (Status == SD_OK)
-  {
-    EraseStatus = eBuffercmp(Buffer_MultiBlock_Rx, MULTI_BUFFER_SIZE);
-  }
-  //printf("Single block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
-  if(EraseStatus == PASSED)
-  {    
+	/* Check the correctness of erased blocks */
+	if (Status == SD_OK)
+	{
+  		EraseStatus = eBuffercmp(Buffer_MultiBlock_Rx, MULTI_BUFFER_SIZE);
+	}
+	//printf("Single block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
+	if(EraseStatus == PASSED)
+	{    
 		LED_GREEN;
-    SDIO_INFO("SD卡擦除测试成功！\n");
-  }
-  else
-  {
+		SDIO_INFO("SD卡擦除测试成功！\n");
+	}
+	else
+	{
 		LED_BLUE;
-    SDIO_ERROR("SD卡擦除测试失败！\n");
-    SDIO_ERROR("温馨提示：部分SD卡不支持擦除测试，若SD卡能通过下面的single读写测试，即表示SD卡能够正常使用。\n");
-  }
+		SDIO_ERROR("SD卡擦除测试失败！\n");
+		SDIO_ERROR("温馨提示：部分SD卡不支持擦除测试，若SD卡能通过下面的single读写测试，即表示SD卡能够正常使用。\n");
+	}
 }
 
 /**
@@ -142,54 +121,42 @@ void SD_SingleBlockTest(void)
   /*------------------- Block Read/Write --------------------------*/
   /* Fill the buffer to send */
 
-  Fill_Buffer(Buffer_Block_Tx, BLOCK_SIZE, 0x320F);
+	Fill_Buffer(Buffer_Block_Tx, BLOCK_SIZE, 0x320F);
 
-  if (Status == SD_OK)
-  {
-    /* Write block of 512 bytes on address 0 */
-    Status = SD_WriteBlock(Buffer_Block_Tx, 0x00, BLOCK_SIZE);
-    /* Check if the Transfer is finished */
-    Status = SD_WaitWriteOperation();
-	while(SD_GetStatus() != SD_TRANSFER_OK);
-//	int i =1;
-//	while(!((i --) ||  (SD_GetStatus() != SD_TRANSFER_OK)))
-	//SDIO_ERROR("SD_SingleBlockTest测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
+	if (Status == SD_OK)
+  	{
+    	/* Write block of 512 bytes on address 0 */
+    	Status = SD_WriteBlock(Buffer_Block_Tx, 0x00, BLOCK_SIZE);
+    	/* Check if the Transfer is finished */
+    	Status = SD_WaitWriteOperation();
+		while(SD_GetStatus() != SD_TRANSFER_OK);
+  	}
 
-  }
+  	if (Status == SD_OK)
+  	{
+    	/* Read block of 512 bytes from address 0 */
+    	Status = SD_ReadBlock(Buffer_Block_Rx, 0x00, BLOCK_SIZE);
+    	/* Check if the Transfer is finished */
+    	Status = SD_WaitReadOperation();
+		while(SD_GetStatus() != SD_TRANSFER_OK);	
+  	}
 
-  if (Status == SD_OK)
-  {
-    /* Read block of 512 bytes from address 0 */
-    Status = SD_ReadBlock(Buffer_Block_Rx, 0x00, BLOCK_SIZE);
-    /* Check if the Transfer is finished */
-    Status = SD_WaitReadOperation();
-	while(SD_GetStatus() != SD_TRANSFER_OK);	
-//	int i =1;
-//	while(!((i --) ||  (SD_GetStatus() != SD_TRANSFER_OK)))
-	//SDIO_ERROR("SD_SingleBlockTest测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
-
-  }
-
-
-  /* Check the correctness of written data */
-  if (Status == SD_OK)
-  {
-    TransferStatus1 = Buffercmp(Buffer_Block_Tx, Buffer_Block_Rx, BLOCK_SIZE);
-  }
-
+  	/* Check the correctness of written data */
+  	if (Status == SD_OK)
+  	{
+    	TransferStatus1 = Buffercmp(Buffer_Block_Tx, Buffer_Block_Rx, BLOCK_SIZE);
+  	}
   
-  if(TransferStatus1 == PASSED)
-  {
-    LED_GREEN;
-    SDIO_INFO("Single block 测试成功！\n");
-
-  }
-  else
-  {
+ 	if(TransferStatus1 == PASSED)
+  	{
+    	LED_GREEN;
+    	SDIO_INFO("Single block 测试成功！\n");
+  	}
+  	else
+  	{
 		LED_RED;
-    SDIO_ERROR("Single block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
-    
-  }
+    	SDIO_ERROR("Single block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");  
+  	}
 }
 
 /**
@@ -200,50 +167,45 @@ void SD_SingleBlockTest(void)
 void SD_MultiBlockTest(void)
 {  
 
-
   /*--------------- Multiple Block Read/Write ---------------------*/
   /* Fill the buffer to send */
   Fill_Buffer(Buffer_MultiBlock_Tx, MULTI_BUFFER_SIZE, 0x0);
 
-  if (Status == SD_OK)
-  {
-    /* Write multiple block of many bytes on address 0 */
-    Status = SD_WriteMultiBlocks(Buffer_MultiBlock_Tx, 0x00, BLOCK_SIZE, NUMBER_OF_BLOCKS);
-    /* Check if the Transfer is finished */
-    Status = SD_WaitWriteOperation();
-    while(SD_GetStatus() != SD_TRANSFER_OK);
-  }
+	if (Status == SD_OK)
+  	{
+		/* Write multiple block of many bytes on address 0 */
+    	Status = SD_WriteMultiBlocks(Buffer_MultiBlock_Tx, 0x00, BLOCK_SIZE, NUMBER_OF_BLOCKS);
+    	/* Check if the Transfer is finished */
+    	Status = SD_WaitWriteOperation();
+	    while(SD_GetStatus() != SD_TRANSFER_OK);
+  	}
 
-  if (Status == SD_OK)
-  {
-    /* Read block of many bytes from address 0 */
-    Status = SD_ReadMultiBlocks(Buffer_MultiBlock_Rx, 0x00, BLOCK_SIZE, NUMBER_OF_BLOCKS);
-    /* Check if the Transfer is finished */
-    Status = SD_WaitReadOperation();
-//	int i =1;
-//	while(!((i --) ||  (SD_GetStatus() != SD_TRANSFER_OK)))
-	while(SD_GetStatus() != SD_TRANSFER_OK);
-	//printf("SD_MultiBlockTest 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试！\n");
+	if (Status == SD_OK)
+  	{
+    	/* Read block of many bytes from address 0 */
+    	Status = SD_ReadMultiBlocks(Buffer_MultiBlock_Rx, 0x00, BLOCK_SIZE, NUMBER_OF_BLOCKS);
+    	/* Check if the Transfer is finished */
+  		Status = SD_WaitReadOperation();
+		while(SD_GetStatus() != SD_TRANSFER_OK);
+  	}
 
-  }
-
-  /* Check the correctness of written data */
-  if (Status == SD_OK)
-  {
-    TransferStatus2 = Buffercmp(Buffer_MultiBlock_Tx, Buffer_MultiBlock_Rx, MULTI_BUFFER_SIZE);
-  }
+  	/* Check the correctness of written data */
+  	if (Status == SD_OK)
+  	{
+    	TransferStatus2 = Buffercmp(Buffer_MultiBlock_Tx, Buffer_MultiBlock_Rx, MULTI_BUFFER_SIZE);
+  	}
   
-  if(TransferStatus2 == PASSED)
-  {
+  	if(TransferStatus2 == PASSED)
+  	{
 		LED_GREEN;
-    	printf("Multi block 测试成功\n");
+    	SDIO_INFO("Multi block 测试成功\n");
 
-  }
-  else
-  {
+  	}
+  	else
+  	{
 		LED_RED;
-    printf("Multi block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试\n");
-  }
+    	SDIO_ERROR("Multi block 测试失败，请确保SD卡正确接入开发板，或换一张SD卡测试\n");
+  	}
 }
 
 /**

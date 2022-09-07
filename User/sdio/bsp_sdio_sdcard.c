@@ -676,16 +676,17 @@ SD_Error SD_PowerON(void)
     /* CMD Response TimeOut (wait for CMDSENT flag) */
     return(errorstatus);
   }
-/********************************************************************************************************/
-  /* CMD8: SEND_IF_COND 
-   * Send CMD8 to verify SD card interface operating condition
-	 *          
-   * Argument: - [31:12]: Reserved (shall be set to '0')
-   *           - [11:8] : Supply Voltage (VHS) 0x1 (Range: 2.7-3.6 V)
-   *           - [7:0]  : Check Pattern (recommended 0xAA) 
-   * CMD Response: R7 
-	 */
-	 /* 接收到命令sd会返回这个参数 */
+  /********************************************************
+  /* CMD8: SEND_IF_COND
+  * 发送 CMD8 检查 SD 卡的电压操作条件
+  *
+  * 参数: - [31:12]: 保留 (要被设置为 '0')
+  * - [11:8] : 支持的电压 (VHS) 0x1 (范围: 2.7-3.6 V)
+  * - [7:0] : 校验模式 (推荐 0xAA)
+  * 响应类型: R7
+  */
+  /* 接收到命令 sd 会返回这个参数 */
+
   SDIO_CmdInitStructure.SDIO_Argument = SD_CHECK_PATTERN;
 	
   SDIO_CmdInitStructure.SDIO_CmdIndex = SDIO_SEND_IF_COND;	
@@ -1734,7 +1735,10 @@ SD_Error SD_WriteBlock(uint8_t *writebuff, uint64_t WriteAddr, uint16_t BlockSiz
 		  * @param  NumberOfBlocks: number of blocks to be written.
  * 输出  ：SD错误类型
  */
-SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint64_t WriteAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
+SD_Error SD_WriteMultiBlocks(uint8_t *writebuff,
+									uint64_t WriteAddr,
+									uint16_t BlockSize,
+									uint32_t NumberOfBlocks)
 {
   SD_Error errorstatus = SD_OK;
   __IO uint32_t count = 0;
@@ -2183,6 +2187,7 @@ SD_Error SD_ProcessIRQSrc(void)
 
   //SDIO_ITConfig(SDIO_IT_DATAEND, DISABLE); //关闭sdio中断使能
   TransferEnd = 1;
+  SDIO_DEBUG("TransferError is %d\n", TransferError);
   return(TransferError);
 }
 
@@ -2835,5 +2840,7 @@ uint8_t convert_from_bytes_to_power_of_two(uint16_t NumberOfBytes)
   }
   return(count);
 }
+
+
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/

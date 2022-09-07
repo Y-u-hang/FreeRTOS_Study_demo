@@ -73,8 +73,6 @@ void Fatfs_Write_Test(void){
 
 void Fatfs_Read_Test(void){
 
-
-	
 	/*------------------- 文件系统测试：读测试 ------------------------------------*/
 	FF_INFO("****** 即将进行文件读取测试... ******\r\n");
 	res_sd = f_open(&fnew, "0:FatFs读写测试文件.txt", FA_OPEN_EXISTING | FA_READ);	 

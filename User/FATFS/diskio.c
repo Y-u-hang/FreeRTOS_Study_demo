@@ -96,7 +96,7 @@ DRESULT disk_read (
 				DWORD scratch[SD_BLOCKSIZE / 4];
 				DISKIO_DEBUG("\n");
 
-				while (count--) 
+				while (count--)
 				{
 					res = disk_read(ATA,(void *)scratch, sector++, 1);
 
@@ -110,27 +110,41 @@ DRESULT disk_read (
 		    return res;
 			}
 			DISKIO_DEBUG("\n");
-
-			SD_state=SD_ReadMultiBlocks(buff,(uint64_t)sector*SD_BLOCKSIZE,SD_BLOCKSIZE,count);
-		  if(SD_state==SD_OK)
+			for(i = 0; i < count; i++)
 			{
-				/* Check if the Transfer is finished */
-				DISKIO_DEBUG("\n");
-				SD_state=SD_WaitReadOperation();
-				DISKIO_DEBUG("\n");
-				//while(i--);
-				while(SD_GetStatus() != SD_TRANSFER_OK){
-					printf(".");
-					for(i = 0; i < 20; i++){
-						printf("\n");
-					}
-										}
+				SD_state = SD_ReadBlock((BYTE*)(&buff[i<<9]), (sector + i) << 9,SD_BLOCKSIZE);
+				SD_state = SD_WaitReadOperation();
+				while(SD_GetStatus() != SD_TRANSFER_OK);
+				if(SD_state!=SD_OK) {
+					status = RES_PARERR;
+					DISKIO_ERROR("status error %d\n", status);
+					return RES_PARERR;
+				}
+				else
+					status = RES_OK;  
+
 			}
-		  DISKIO_DEBUG("\n");
-			if(SD_state!=SD_OK)
-				status = RES_PARERR;
-		  else
-			  status = RES_OK;	
+
+//			SD_state=SD_ReadMultiBlocks(buff,(uint64_t)sector*SD_BLOCKSIZE,SD_BLOCKSIZE,count);
+//		  	if(SD_state==SD_OK)
+//			{
+//				/* Check if the Transfer is finished */
+//				DISKIO_DEBUG("\n");
+//				SD_state=SD_WaitReadOperation();
+//				DISKIO_DEBUG("\n");
+//				//while(i--);
+//				while(SD_GetStatus() != SD_TRANSFER_OK){
+//					printf(".");
+//					for(i = 0; i < 20; i++){
+//						printf("\n");
+//					}
+//										}
+//			}
+//		  	DISKIO_DEBUG("\n");
+//			if(SD_state!=SD_OK)
+//				status = RES_PARERR;
+//		  	else
+//			  	status = RES_OK;	
 			break;   
 			
 		case SPI_FLASH:
@@ -142,8 +156,6 @@ DRESULT disk_read (
 	DISKIO_DEBUG("\n");
 	return status;
 }
-
-
 
 /*-----------------------------------------------------------------------*/
 /* 写扇区：见数据写入指定扇区空间上                                      */
@@ -158,6 +170,7 @@ DRESULT disk_write (
 {
 	DRESULT status = RES_PARERR;
 	SD_Error SD_state = SD_OK;
+	int i = 0;
 	if (!count) {
 		return RES_PARERR;		/* Check parameter */
 	}
@@ -180,21 +193,46 @@ DRESULT disk_write (
 					buff += SD_BLOCKSIZE;
 		    	}
 		    return res;
-			}		
-		
-			SD_state=SD_WriteMultiBlocks((uint8_t *)buff,(uint64_t)sector*SD_BLOCKSIZE,SD_BLOCKSIZE,count);
-			if(SD_state==SD_OK)
-			{
-				/* Check if the Transfer is finished */
-				SD_state=SD_WaitWriteOperation();
-				DISKIO_DEBUG("\n");
-				/* Wait until end of DMA transfer */
-				while(SD_GetStatus() != SD_TRANSFER_OK);			
 			}
-			if(SD_state!=SD_OK)
-				status = RES_PARERR;
-		  else
-			  status = RES_OK;	
+			// 由于SDIO的时钟为24M STMF103的时钟72M， SDIO高速4BIT ，MCU好像读不过来 24X4X2
+			for (i = 0; i < count; i++) {
+				SD_state = SD_WriteBlock((BYTE*)(&buff[i<<9]), (uint64_t)(sector + i) << 9, SD_BLOCKSIZE);
+//				buff =<< 9; 
+//				sector =<< 9;
+				SD_state = SD_WaitWriteOperation();
+				while(SD_GetStatus() != SD_TRANSFER_OK);
+			  	if(SD_state!=SD_OK) {
+					status = RES_PARERR;
+					DISKIO_ERROR("status error %d\n", status);
+					return RES_PARERR;
+			  	}
+				else
+					status = RES_OK;  
+			}
+
+
+//			SD_state=SD_WriteMultiBlocks((uint8_t *)buff,(uint64_t)sector*SD_BLOCKSIZE,SD_BLOCKSIZE,count);
+//			if(SD_state==SD_OK)
+//			{
+//				int num = 0;
+//				/* Check if the Transfer is finished */
+//				SD_state=SD_WaitWriteOperation();
+//				DISKIO_DEBUG("\n");
+//				/* Wait until end of DMA transfer */
+//
+//				while(SD_GetStatus() != SD_TRANSFER_OK) {
+//					printf(".");
+//					num ++;
+//					if (num == 20) {
+//						num = 0;
+//						printf("\n");
+//					}
+//				}
+//			}
+//			if(SD_state!=SD_OK)
+//				status = RES_PARERR;
+//		  	else
+//			  	status = RES_OK;	
 		break;
 
 		case SPI_FLASH:
