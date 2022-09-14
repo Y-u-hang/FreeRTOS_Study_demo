@@ -323,6 +323,12 @@ typedef struct
 /** @defgroup DMA_flags_definition 
   * @{
   */
+  // DMA中断状态寄存器(DMA_ISR)
+  // 0~6 通道的所有中断配置 一共28Bit 7组
+  // TEIFx	通道x的传输错误标志				0：没有传输错误	1:有传输错误
+  // HTIFx	通道x的半传输标志				0：没有		1：有
+  // TCIFx	通道x的传输完成标志				0：没有		1：有
+  // GIFx	通道x的全局中断标志				0：没有以上三个中断					1：有
 #define DMA1_FLAG_GL1                      ((uint32_t)0x00000001)
 #define DMA1_FLAG_TC1                      ((uint32_t)0x00000002)
 #define DMA1_FLAG_HT1                      ((uint32_t)0x00000004)

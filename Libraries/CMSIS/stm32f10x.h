@@ -1,4 +1,4 @@
-/**
+﻿/**
   ******************************************************************************
   * @file    stm32f10x.h
   * @author  MCD Application Team
@@ -797,17 +797,115 @@ typedef struct
 
 typedef struct
 {
-  __IO uint32_t CCR;
-  __IO uint32_t CNDTR;
-  __IO uint32_t CPAR;
-  __IO uint32_t CMAR;
+  __IO uint32_t CCR;	// DMA通道x配置寄存器(DMA_CCRx)(x = 1…7)
+  __IO uint32_t CNDTR;	// DMA通道x传输数量寄存器(DMA_CNDTRx)(x = 1…7)
+  __IO uint32_t CPAR;	// DMA通道x外设地址寄存器(DMA_CPARx)(x = 1…7)				通道不工作时 不能写
+  __IO uint32_t CMAR;	// DMA通道x存储器地址寄存器(DMA_CMARx)(x = 1…7)
 } DMA_Channel_TypeDef;
 
 typedef struct
 {
-  __IO uint32_t ISR;
-  __IO uint32_t IFCR;
+  __IO uint32_t ISR;	 // DMA中断状态寄存器(DMA_ISR)				偏移 0
+  __IO uint32_t IFCR;	// DMA中断标志清除寄存器(DMA_IFCR)			偏移 4
 } DMA_TypeDef;
+
+/*	CCR;	// DMA通道x配置寄存器(DMA_CCRx)(x = 1…7)
+
+// DMA通道x配置寄存器(DMA_CCRx)(x = 1…7) 7个
+// 偏移地址： 0x08 + 20 x (通道编号 – 1)
+// 复位值： 0x0000 0000
+31~15Bit	0 无用
+14Bit	MEM2MEM：存储器到存储器模式 (Memory to memory mode)
+			0：非存储器到存储器模式；
+			1：启动存储器到存储器模式。
+13 12Bit	PL[1:0]：通道优先级 (Channel priority level)
+			00：低
+			01：中
+			10：高
+			11：最高
+10 11		MSIZE[1:0]：存储器数据宽度 (Memory size)
+			00： 8位
+			01： 16位
+			10： 32位
+			11：保留
+8 9			PSIZE[1:0]：外设数据宽度 (Peripheral size)
+			00： 8位
+			01： 16位
+			10： 32位
+			11：保留
+7			MINC：存储器地址增量模式 (Memory increment mode)
+			0：不执行存储器地址增量操作
+			1：执行存储器地址增量操作
+6			PINC：外设地址增量模式 (Peripheral increment mode)
+			0：不执行外设地址增量操作
+			1：执行外设地址增量操作
+5			CIRC：循环模式 (Circular mode)
+			该位由软件设置和清除。
+			0：不执行循环操作
+			1：执行循环操作
+
+4			DIR：数据传输方向 (Data transfer direction)
+			该位由软件设置和清除。
+			0：从外设读
+			1：从存储器读
+
+3			TEIE：允许传输错误中断 (Transfer error interrupt enable)
+			该位由软件设置和清除。
+			0：禁止TE中断
+			0：允许TE中断
+
+2			HTIE：允许半传输中断 (Half transfer interrupt enable)
+			该位由软件设置和清除。
+			0：禁止HT中断
+			0：允许HT中断
+
+1			TCIE：允许传输完成中断 (Transfer complete interrupt enable)
+			该位由软件设置和清除。
+			0：禁止TC中断
+			0：允许TC中断
+
+0			EN：通道开启 (Channel enable)
+			该位由软件设置和清除。
+			0：通道不工作
+			1：通道开启
+
+*/
+
+/*	CNDTR;	// DMA通道x传输数量寄存器(DMA_CNDTRx)(x = 1…7)
+	NDT[15:0]：数据传输数量 (Number of data to transfer)
+	数据传输数量为0至65535。这个寄存器只能在通道不工作(DMA_CCRx的EN=0)时写入。通道开启后该寄存器变为只读，指示剩余的待传输字节数目。
+	寄存器内容在每次DMA传输后递减。数据传输结束后，寄存器的内容或者变为0；
+	或者当该通道配置为自动重加载模式时，寄存器的内容将被自动重新加载为之前配置时的数值。
+	当寄存器的内容为0时，无论通道是否开启，都不会发生任何数据传输
+*/
+
+/*	CPAR;	// DMA通道x外设地址寄存器(DMA_CPARx)(x = 1…7)	
+	PA[31:0]：外设地址 (Peripheral address)
+	外设数据寄存器的基地址，作为数据传输的源或目标。
+	当PSIZE=’01’(16位)，不使用PA[0]位。操作自动地与半字地址对齐。
+	当PSIZE=’10’(32位)，不使用PA[1:0]位。操作自动地与字地址对齐
+
+
+*/
+
+/*	DMA通道x存储器地址寄存器(DMA_CMARx)(x = 1…7)
+	MA[31:0]：存储器地址
+	存储器地址作为数据传输的源或目标
+	当MSIZE=’01’(16位)，不使用MA[0]位。操作自动地与半字地址对齐。
+	当MSIZE=’10’(32位)，不使用MA[1:0]位。操作自动地与字地址对齐
+
+
+*/
+// DMA中断状态寄存器(DMA_ISR)
+// 0~6 通道的所有中断配置 一共28Bit 7组
+// TEIFx  通道x的传输错误标志				  0：没有传输错误  1:有传输错误
+// HTIFx  通道x的半传输标志 			  0：没有	  1：有
+// TCIFx  通道x的传输完成标志				  0：没有	  1：有
+// GIFx   通道x的全局中断标志				  0：没有以上三个中断					  1：有
+
+//	// DMA中断标志清除寄存器(DMA_IFCR)
+	// 就是在上面是配置中断的位置，若有中断上面的像因为位置便会有flag 我们可以去读或者产生
+	// 中断标志立起来之后，需要将其恢复便需要在后面这个寄存器里面来给他设置 flag 复位 清除
 
 /** 
   * @brief Ethernet MAC

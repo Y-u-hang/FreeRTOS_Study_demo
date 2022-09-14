@@ -1,4 +1,4 @@
-/**
+ï»¿/**
   ******************************************************************************
   * @file    stm32f10x_gpio.h
   * @author  MCD Application Team
@@ -67,23 +67,23 @@ typedef enum
 /** 
   * @brief  Configuration Mode enumeration  
   */
-// ¸¡¿ÕÊäÈë£¬IOµÄµçÆ½×´Ì¬ÊÇ²»È·¶¨µÄ£¬ÍêÈ«ÓÉÍâ²¿ÊäÈë¾ö¶¨£»
-// ÉÏÀ­ÊäÈë£¬IOÄÚ²¿ÉÏÀ­µç×èÊäÈë  ==Ðü¿ÕÊ±£¬´¦ÓÚ¸ßµçÆ½×´Ì¬
-// ÏÂÀ­ÊäÈë£¬IOÄÚ²¿ÏÂÀ­µç×èÊäÈë ==Ðü¿ÕÊ±£¬´¦ÓÚµÍµçÆ½×´Ì¬
-// Ä£ÄâÊäÈë£¬Ó¦ÓÃADCÄ£ÄâÊäÈë£¬»òÕßµÍ¹¦ºÄÏÂÊ¡µç
+// æµ®ç©ºè¾“å…¥ï¼ŒIOçš„ç”µå¹³çŠ¶æ€æ˜¯ä¸ç¡®å®šçš„ï¼Œå®Œå…¨ç”±å¤–éƒ¨è¾“å…¥å†³å®šï¼›
+// ä¸Šæ‹‰è¾“å…¥ï¼ŒIOå†…éƒ¨ä¸Šæ‹‰ç”µé˜»è¾“å…¥  ==æ‚¬ç©ºæ—¶ï¼Œå¤„äºŽé«˜ç”µå¹³çŠ¶æ€
+// ä¸‹æ‹‰è¾“å…¥ï¼ŒIOå†…éƒ¨ä¸‹æ‹‰ç”µé˜»è¾“å…¥ ==æ‚¬ç©ºæ—¶ï¼Œå¤„äºŽä½Žç”µå¹³çŠ¶æ€
+// æ¨¡æ‹Ÿè¾“å…¥ï¼Œåº”ç”¨ADCæ¨¡æ‹Ÿè¾“å…¥ï¼Œæˆ–è€…ä½ŽåŠŸè€—ä¸‹çœç”µ
 
-// ¿ªÂ©Êä³ö£¬Êä³öÎª1 Ê±£¬ÐèÒªÍâ²¿µçÂ·ÉÏÀ­£»Êä³öÎª0Ê±£¬Íâ²¿À­µÍ»òÕß²»¹Ü£¬¸ÃÖÖ·½Ê½¿É¶Á¿ÉÐ´
-// ÍÆÍìÊä³ö£¬IOÊä³ö0-½ÓGND£¬ IOÊä³ö1 -½ÓVCC£¬¶ÁÊäÈëÖµÊÇÎ´ÖªµÄ
+// å¼€æ¼è¾“å‡ºï¼Œè¾“å‡ºä¸º1 æ—¶ï¼Œéœ€è¦å¤–éƒ¨ç”µè·¯ä¸Šæ‹‰ï¼›è¾“å‡ºä¸º0æ—¶ï¼Œå¤–éƒ¨æ‹‰ä½Žæˆ–è€…ä¸ç®¡ï¼Œè¯¥ç§æ–¹å¼å¯è¯»å¯å†™
+// æŽ¨æŒ½è¾“å‡ºï¼ŒIOè¾“å‡º0-æŽ¥GNDï¼Œ IOè¾“å‡º1 -æŽ¥VCCï¼Œè¯»è¾“å…¥å€¼æ˜¯æœªçŸ¥çš„	
 
 typedef enum
-{ GPIO_Mode_AIN = 0x0,           // Ä£ÄâÊäÈë
-  GPIO_Mode_IN_FLOATING = 0x04,  // ¸¡¿ÕÊäÈë
-  GPIO_Mode_IPD = 0x28,          // ÏÂÀ­ÊäÈë
-  GPIO_Mode_IPU = 0x48,          // ÉÏÀ­ÊäÈë
-  GPIO_Mode_Out_OD = 0x14,       // ¿ªÂ©Êä³ö
-  GPIO_Mode_Out_PP = 0x10,       // ÍÆÍìÊä³ö
-  GPIO_Mode_AF_OD = 0x1C,        // ¸´ÓÃ¿ªÂ©Êä³ö	£¨TX1,MOSI,MISO.SCK.SS£©
-  GPIO_Mode_AF_PP = 0x18         // ¸´ÓÃÍÆÍìÊä³ö	£¨I2CµÄSCL,SDA£©
+{ GPIO_Mode_AIN = 0x0,           // æ¨¡æ‹Ÿè¾“å…¥
+  GPIO_Mode_IN_FLOATING = 0x04,  // æµ®ç©ºè¾“å…¥
+  GPIO_Mode_IPD = 0x28,          // ä¸‹æ‹‰è¾“å…¥
+  GPIO_Mode_IPU = 0x48,          // ä¸Šæ‹‰è¾“å…¥
+  GPIO_Mode_Out_OD = 0x14,       // å¼€æ¼è¾“å‡º
+  GPIO_Mode_Out_PP = 0x10,       // æŽ¨æŒ½è¾“å‡º
+  GPIO_Mode_AF_OD = 0x1C,        // å¤ç”¨å¼€æ¼è¾“å‡º	ï¼ˆTX1,MOSI,MISO.SCK.SSï¼‰
+  GPIO_Mode_AF_PP = 0x18         // å¤ç”¨æŽ¨æŒ½è¾“å‡º	ï¼ˆI2Cçš„SCL,SDAï¼‰
 }GPIOMode_TypeDef;
 
 #define IS_GPIO_MODE(MODE) (((MODE) == GPIO_Mode_AIN) || ((MODE) == GPIO_Mode_IN_FLOATING) || \

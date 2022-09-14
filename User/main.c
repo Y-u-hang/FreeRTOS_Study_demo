@@ -279,7 +279,6 @@ static void BSP_Init(void)
 
 	MAIN_INFO("BSP初始化完成 \n");
 
-	MAIN_WARNING("\n\n生日快乐\n\n");
 }
 
 /***********************************************************************
@@ -1109,7 +1108,7 @@ static void xSDcard_Task(void){
 	while(1) {
 
 		LED_PURPLE
-		MAIN_INFO("xSDcard_Task\n");
+		// MAIN_INFO("xSDcard_Task\n");
 		// PC11
 		LED_YELLOW
 		vTaskDelay(3000);
@@ -1139,7 +1138,8 @@ static void xTest_Task()
     MAIN_INFO("BinarySem_Can_Receive二值信号量创建成功!\r\n");
 
 	while (1)
-	{
+	{	
+
 	    //获取二值信号量 xSemaphore,没获取到则一直等待
 		xReturn = xSemaphoreTake(BinarySem_Debug_Dma,/* 二值信号量句柄 */
 								portMAX_DELAY); /* 等待时间 */
