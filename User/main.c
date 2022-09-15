@@ -200,29 +200,11 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
 
 int main(void)
 {	
-  BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
+	BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
 
   /* 开发板硬件初始化 */
-  BSP_Init();
-   /* 创建 AppTaskCreate 任务 */
-// 	静态创建任务
-//	AppTaskCreate_Handle = xTaskCreateStatic((TaskFunction_t	)AppTaskCreate,		//任务函数
-//															(const char* 	)"AppTaskCreate",		//任务名称
-//															(uint32_t 		)128,	//任务堆栈大小
-//															(void* 		  	)NULL,				//传递给任务函数的参数
-//															(UBaseType_t 	)3, 	//任务优先级
-//															(StackType_t*   )AppTaskCreate_Stack,	//任务堆栈
-//															(StaticTask_t*  )&AppTaskCreate_TCB);	//任务控制块   
-//
-//															
-//	if(NULL != AppTaskCreate_Handle)/* 创建成功 */
-//    vTaskStartScheduler();   /* 启动任务，开启调度 */
-	
-
-	
-	/* 开发板硬件初始化 */
 	BSP_Init();
-	//printf("这是一个[野火]-STM32全系列开发板-FreeRTOS-动态创建任务!\r\n");
+
 	printf("这是一个野火开发板!r\n");
 	 /* 创建AppTaskCreate任务 */
 	xReturn = xTaskCreate((TaskFunction_t )AppTaskCreate,  /* 任务入口函数 */
@@ -235,9 +217,9 @@ int main(void)
 	/* 启动任务调度 */		   
 	// https://blog.csdn.net/zhoutaopower/article/details/107034995 啓動流程可以參照該鏈接
 	if(pdPASS == xReturn)
-	  vTaskStartScheduler();   /* 启动任务，开启调度 */
+		vTaskStartScheduler();   /* 启动任务，开启调度 */
 	else
-	  return -1;  
+		return -1;  
 	
 	while(1);   /* 正常不会执行到这里 */    
 }
@@ -258,6 +240,8 @@ static void BSP_Init(void)
 	 * 优先级分组只需要分组一次即可，以后如果有其他的任务需要用到中断，
 	 * 都统一用这个优先级分组，千万不要再分组，切忌。
 	 */
+	uint32_t ChipUniqueID[3];
+
 	NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );
 	
 	/* LED 初始化 */
@@ -275,7 +259,20 @@ static void BSP_Init(void)
 	BASIC_TIM_Init();
 	
 	/*初始化can,在中断接收CAN数据包*/
+
 	CAN_Config();
+
+
+	ChipUniqueID[0] = *(__IO u32 *)(0X1FFFF7F0); // 高字节
+	ChipUniqueID[1] = *(__IO u32 *)(0X1FFFF7EC); // 
+	ChipUniqueID[2] = *(__IO u32 *)(0X1FFFF7E8); // 低字节
+	/* printf the chipid */
+	MAIN_INFO("芯片的唯一ID为: 0x%08X-%08X-%08X\n",
+	        ChipUniqueID[0],ChipUniqueID[1],ChipUniqueID[2]);
+	
+	/* printf the flash memory amount */
+	MAIN_INFO("芯片flash的容量为: %dK \n", *(__IO u16 *)(0X1FFFF7E0));
+
 
 	MAIN_INFO("BSP初始化完成 \n");
 
