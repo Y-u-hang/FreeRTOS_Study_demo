@@ -160,7 +160,10 @@ a statically allocated stack and a dynamically allocated TCB. */
 	microcontroller architecture. */
 
 	/* uxTopReadyPriority holds the priority of the highest priority ready
-	state task. */
+	state task.
+	就序列表最高优先级，也是一个全局变量来记录
+	这里决定是否要进行更新
+	*/
 	#define taskRECORD_READY_PRIORITY( uxPriority )														\
 	{																									\
 		if( ( uxPriority ) > uxTopReadyPriority )														\
@@ -255,10 +258,13 @@ count overflows. */
 /*
  * Place the task represented by pxTCB into the appropriate ready list for
  * the task.  It is inserted at the end of the list.
+	添加到就绪列表
  */
 #define prvAddTaskToReadyList( pxTCB )																\
 	traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
-	taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												\
+	/*对比就序列列表中 最高优先级，重置就绪列表最高优先级 */																	\
+	taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );		 											\
+	/*将任务插入到就绪列表中*/																					\
 	vListInsertEnd( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) ); \
 	tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
 /*-----------------------------------------------------------*/
@@ -400,7 +406,7 @@ PRIVILEGED_DATA static volatile BaseType_t xSchedulerRunning 		= pdFALSE;
 PRIVILEGED_DATA static volatile UBaseType_t uxPendedTicks 			= ( UBaseType_t ) 0U;
 PRIVILEGED_DATA static volatile BaseType_t xYieldPending 			= pdFALSE;
 PRIVILEGED_DATA static volatile BaseType_t xNumOfOverflows 			= ( BaseType_t ) 0;
-PRIVILEGED_DATA static UBaseType_t uxTaskNumber 					= ( UBaseType_t ) 0U;
+PRIVILEGED_DATA static UBaseType_t uxTaskNumber 					= ( UBaseType_t ) 0U;	// 任务数量，以后可以统计中用到
 PRIVILEGED_DATA static volatile TickType_t xNextTaskUnblockTime		= ( TickType_t ) 0U; /* Initialised to portMAX_DELAY before the scheduler starts. */
 PRIVILEGED_DATA static TaskHandle_t xIdleTaskHandle					= NULL;			/*< Holds the handle of the idle task.  The idle task is created automatically when the scheduler is started. */
 
@@ -714,6 +720,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 		StackType_t *pxStack;
 
 			/* Allocate space for the stack used by the task being created. */
+			// 为栈分配空间 栈的设定大小 X sizeof （宽度）
 			pxStack = ( StackType_t * ) pvPortMalloc( ( ( ( size_t ) usStackDepth ) * sizeof( StackType_t ) ) ); /*lint !e961 MISRA exception as the casts are only redundant for some ports. */
 
 			if( pxStack != NULL )
@@ -724,6 +731,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 				if( pxNewTCB != NULL )
 				{
 					/* Store the stack location in the TCB. */
+					// 栈空间分配
 					pxNewTCB->pxStack = pxStack;
 				}
 				else
@@ -805,6 +813,7 @@ UBaseType_t x;
 	by the port. */
 	#if( portSTACK_GROWTH < 0 )
 	{
+		// 栈是由 低到高
 		pxTopOfStack = pxNewTCB->pxStack + ( ulStackDepth - ( uint32_t ) 1 );
 		pxTopOfStack = ( StackType_t * ) ( ( ( portPOINTER_SIZE_TYPE ) pxTopOfStack ) & ( ~( ( portPOINTER_SIZE_TYPE ) portBYTE_ALIGNMENT_MASK ) ) ); /*lint !e923 MISRA exception.  Avoiding casts between pointers and integers is not practical.  Size differences accounted for using portPOINTER_SIZE_TYPE type. */
 
@@ -865,8 +874,8 @@ UBaseType_t x;
 	}
 	#endif /* configUSE_MUTEXES */
 
-	vListInitialiseItem( &( pxNewTCB->xStateListItem ) );
-	vListInitialiseItem( &( pxNewTCB->xEventListItem ) );
+	vListInitialiseItem( &( pxNewTCB->xStateListItem ) );	// 任务状态链表
+	vListInitialiseItem( &( pxNewTCB->xEventListItem ) );	// 事件链表
 
 	/* Set the pxNewTCB as a link back from the ListItem_t.  This is so we can get
 	back to	the containing TCB from a generic item in a list. */
@@ -944,6 +953,7 @@ UBaseType_t x;
 	}
 	#else /* portUSING_MPU_WRAPPERS */
 	{
+		// 初始化一下栈空间
 		pxNewTCB->pxTopOfStack = pxPortInitialiseStack( pxTopOfStack, pxTaskCode, pvParameters );
 	}
 	#endif /* portUSING_MPU_WRAPPERS */
@@ -952,6 +962,7 @@ UBaseType_t x;
 	{
 		/* Pass the handle out in an anonymous way.  The handle can be used to
 		change the created task's priority, delete the created task, etc.*/
+		// 栈顶存放任务句柄
 		*pxCreatedTask = ( TaskHandle_t ) pxNewTCB;
 	}
 	else
@@ -968,7 +979,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 	taskENTER_CRITICAL();
 	{
 		uxCurrentNumberOfTasks++;
-		if( pxCurrentTCB == NULL )
+		if( pxCurrentTCB == NULL )	// 任务控制块一个都没有 刚刚初始化时 
 		{
 			/* There are no other tasks, or all the other tasks are in
 			the suspended state - make this the current task. */
@@ -1030,6 +1041,8 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 		then it should run now. */
 		if( pxCurrentTCB->uxPriority < pxNewTCB->uxPriority )
 		{
+			// 当前优先级小于就绪优先级
+			// 设置 NVIE  中断 pensv
 			taskYIELD_IF_USING_PREEMPTION();
 		}
 		else
@@ -3357,7 +3370,9 @@ static portTASK_FUNCTION( prvIdleTask, pvParameters )
 static void prvInitialiseTaskLists( void )
 {
 UBaseType_t uxPriority;
-
+/*
+	初始化 5 个双向环状链表
+*/
 	for( uxPriority = ( UBaseType_t ) 0U; uxPriority < ( UBaseType_t ) configMAX_PRIORITIES; uxPriority++ )
 	{
 		vListInitialise( &( pxReadyTasksLists[ uxPriority ] ) );
@@ -3381,8 +3396,8 @@ UBaseType_t uxPriority;
 
 	/* Start with pxDelayedTaskList using list1 and the pxOverflowDelayedTaskList
 	using list2. */
-	pxDelayedTaskList = &xDelayedTaskList1;
-	pxOverflowDelayedTaskList = &xDelayedTaskList2;
+	pxDelayedTaskList = &xDelayedTaskList1;			// 延时链表
+	pxOverflowDelayedTaskList = &xDelayedTaskList2;	// 延时超时链表
 }
 /*-----------------------------------------------------------*/
 

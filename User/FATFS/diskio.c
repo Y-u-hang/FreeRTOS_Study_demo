@@ -33,6 +33,17 @@ DSTATUS disk_status (
 			break;
     
 		case SPI_FLASH:        /* SPI Flash */   
+			/* SPI Flash状态检测：读取SPI Flash 设备ID */
+			if(sFLASH_ID == SPI_FLASH_ReadID())
+			{
+			  /* 设备ID读取结果正确 */
+			  status &= ~STA_NOINIT;
+			}
+			else
+			{
+			  /* 设备ID读取结果错误 */
+			  status = STA_NOINIT;;
+			}
 			break;
 
 		default:

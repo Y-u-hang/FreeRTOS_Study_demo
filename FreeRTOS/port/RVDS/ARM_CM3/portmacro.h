@@ -217,6 +217,8 @@ static portFORCE_INLINE void vPortSetBASEPRI( uint32_t ulBASEPRI )
 }
 /*-----------------------------------------------------------*/
 
+// 系统时钟优先级之外的都会被屏蔽掉
+// 设置FreeRTOS系统可管理的最大优先级
 static portFORCE_INLINE void vPortRaiseBASEPRI( void )
 {
 uint32_t ulNewBASEPRI = configMAX_SYSCALL_INTERRUPT_PRIORITY;
@@ -225,9 +227,9 @@ uint32_t ulNewBASEPRI = configMAX_SYSCALL_INTERRUPT_PRIORITY;
 	{
 		/* Set BASEPRI to the max syscall priority to effect a critical
 		section. */
-		msr basepri, ulNewBASEPRI
-		dsb
-		isb
+		msr basepri, ulNewBASEPRI		// 设置屏蔽中断的阈值
+		dsb		// 数据同步隔离
+		isb		// 指令同步隔离
 	}
 }
 /*-----------------------------------------------------------*/

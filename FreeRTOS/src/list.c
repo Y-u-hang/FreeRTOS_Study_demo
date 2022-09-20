@@ -1,4 +1,4 @@
-/*
+﻿/*
     FreeRTOS V9.0.0 - Copyright (C) 2016 Real Time Engineers Ltd.
     All rights reserved
 
@@ -81,10 +81,12 @@ void vListInitialise( List_t * const pxList )
 	/* The list structure contains a list item which is used to mark the
 	end of the list.  To initialise the list the list end is inserted
 	as the only list entry. */
+	// 钩子？用来索引这个链表的，初始化时指向尾部
 	pxList->pxIndex = ( ListItem_t * ) &( pxList->xListEnd );			/*lint !e826 !e740 The mini list structure is used as the list end to save RAM.  This is checked and valid. */
 
 	/* The list end value is the highest possible value in the list to
 	ensure it remains at the end of the list. */
+	// 最大值
 	pxList->xListEnd.xItemValue = portMAX_DELAY;
 
 	/* The list end next and previous pointers point to itself so we know
@@ -104,6 +106,7 @@ void vListInitialise( List_t * const pxList )
 void vListInitialiseItem( ListItem_t * const pxItem )
 {
 	/* Make sure the list item is not recorded as being on a list. */
+	// 初始化 该节点，没有挂载到任何链表上
 	pxItem->pvContainer = NULL;
 
 	/* Write known values into the list item if

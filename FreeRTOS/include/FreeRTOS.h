@@ -740,7 +740,7 @@ extern "C" {
 	#define portASSERT_IF_INTERRUPT_PRIORITY_INVALID()
 #endif
 
-#ifndef configUSE_TRACE_FACILITY
+#ifndef configUSE_TRACE_FACILITY	// 调用可视化追踪
 	#define configUSE_TRACE_FACILITY 0
 #endif
 
@@ -765,7 +765,7 @@ extern "C" {
 	#define configAPPLICATION_ALLOCATED_HEAP 0
 #endif
 
-#ifndef configUSE_TASK_NOTIFICATIONS
+#ifndef configUSE_TASK_NOTIFICATIONS	// 任务通知功能
 	#define configUSE_TASK_NOTIFICATIONS 1
 #endif
 
