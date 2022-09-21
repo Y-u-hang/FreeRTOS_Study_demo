@@ -322,10 +322,12 @@ BaseType_t xPortStartScheduler( void )
 {
 	#if( configASSERT_DEFINED == 1 )
 	{
-		volatile uint32_t ulOriginalPriority;
+		// 优先级组也叫抢占优先级，组内优先级也叫子优先级
+		volatile uint32_t ulOriginalPriority;	// 中断优先级的寄存器
 		volatile uint8_t * const pucFirstUserPriorityRegister =
-			( uint8_t * ) ( portNVIC_IP_REGISTERS_OFFSET_16 + portFIRST_USER_INTERRUPT_NUMBER );	// 0xE000E3F0 + 16
-		volatile uint8_t ucMaxPriorityValue;
+			( uint8_t * ) ( portNVIC_IP_REGISTERS_OFFSET_16 + portFIRST_USER_INTERRUPT_NUMBER );	// 0xE000E3F0 + 16 == 0xE000E400
+			// 0xE000E400 是中断寄存器组首地址，NVIC 中断优先级寄存器的基地址
+		volatile uint8_t ucMaxPriorityValue;	// 子优先级
 
 		/* Determine the maximum priority from which ISR safe FreeRTOS API
 		functions can be called.  ISR safe functions are those that end in
@@ -333,24 +335,34 @@ BaseType_t xPortStartScheduler( void )
 		ensure interrupt entry is as fast and simple as possible.
 
 		Save the interrupt priority value that is about to be clobbered. */
-		// 将地址 0xE000E3F0 + 16 上的值保存到ulOriginalPriority中
-		ulOriginalPriority = *pucFirstUserPriorityRegister;
+		/* 保存中断优先级值,因为下面要覆写这个寄存器(PRI_0) */
+		ulOriginalPriority = *pucFirstUserPriorityRegister;	// 获取PRI_0的值 
 
 		/* Determine the number of priority bits available.  First write to all
 		possible bits. */
 		// 将该地址上的值 赋值为FF
+		// 中断优先级寄存器不是 所有BIT都在记录 优先级的值 还有优先级组的概念
+		// 这样写入到这寄存器中，因为有些BIT是不能写入的 写进去 读出来 
+		// 就知道 哪些BIT能使用 
+		// 但是这几个BIT表示优先级  要分成hi两个部分  表示子优先级和抢占优先级
+		// 这个就是NVIC寄存器组来决定的。
+		// SCB->AIRCR[10:8]（0xE000_ED00） 寄存器的 PRIGROUP 的值
+		// NVIC_PriorityGroup_4 4位抢占优先级，0位响应优先级
 		*pucFirstUserPriorityRegister = portMAX_8_BIT_VALUE;
 
 		/* Read the value back to see how many bits stuck. */
-		// 设置最大优先级 FF
+		// 获取最高优先级 有几个BIT被使用分配
 		ucMaxPriorityValue = *pucFirstUserPriorityRegister;
 
+
 		/* Use the same mask on the maximum system call priority. */
-		ucMaxSysCallPriority = configMAX_SYSCALL_INTERRUPT_PRIORITY & ucMaxPriorityValue; // 80
+		ucMaxSysCallPriority = configMAX_SYSCALL_INTERRUPT_PRIORITY & ucMaxPriorityValue; // 0xF0
 
 		/* Calculate the maximum acceptable priority group value for the number
 		of bits read back. */
+		// 计算最大优先级组 子优先级
 		ulMaxPRIGROUPValue = portMAX_PRIGROUP_BITS;	// 7
+		// 当用到NIVC4的时候 子优先级为0
 		while( ( ucMaxPriorityValue & portTOP_BIT_OF_BYTE ) == portTOP_BIT_OF_BYTE )
 		{
 			ulMaxPRIGROUPValue--;
@@ -377,11 +389,13 @@ BaseType_t xPortStartScheduler( void )
 
 	/* Start the timer that generates the tick ISR.  Interrupts are disabled
 	here already. */
+	 /* 启动系统节拍定时器,即SysTick定时器,初始化中断周期并使能定时器*/
 	vPortSetupTimerInterrupt();
 
 	/* Initialise the critical nesting count ready for the first task. */
+	 /* 初始化临界区嵌套计数器 */
 	uxCriticalNesting = 0;
-
+	
 	/* Start the first task. */
 	prvStartFirstTask();
 

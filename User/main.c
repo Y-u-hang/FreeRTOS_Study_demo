@@ -241,7 +241,7 @@ static void BSP_Init(void)
 	 * 都统一用这个优先级分组，千万不要再分组，切忌。
 	 */
 	uint32_t ChipUniqueID[3];
-
+	extern uint32_t SystemCoreClock;
 	NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );
 	
 	/* LED 初始化 */
@@ -272,7 +272,8 @@ static void BSP_Init(void)
 	
 	/* printf the flash memory amount */
 	MAIN_INFO("芯片flash的容量为: %dK \n", *(__IO u16 *)(0X1FFFF7E0));
-
+	
+	MAIN_INFO("主晶振采用：%d Hz\n", SystemCoreClock);
 
 	MAIN_INFO("BSP初始化完成 \n");
 

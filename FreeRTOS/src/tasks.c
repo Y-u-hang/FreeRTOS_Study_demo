@@ -258,13 +258,13 @@ count overflows. */
 /*
  * Place the task represented by pxTCB into the appropriate ready list for
  * the task.  It is inserted at the end of the list.
-	添加到就绪列表
+ * 添加到就绪列表
  */
+ /*对比就序列列表中 最高优先级，重置就绪列表最高优先级 */	
+ /*将任务插入到就绪列表中*/									 												
 #define prvAddTaskToReadyList( pxTCB )																\
 	traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
-	/*对比就序列列表中 最高优先级，重置就绪列表最高优先级 */																	\
-	taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );		 											\
-	/*将任务插入到就绪列表中*/																					\
+	taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );		 										\
 	vListInsertEnd( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) ); \
 	tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
 /*-----------------------------------------------------------*/
@@ -383,7 +383,7 @@ PRIVILEGED_DATA static List_t xDelayedTaskList1;						/*< Delayed tasks. */
 PRIVILEGED_DATA static List_t xDelayedTaskList2;						/*< Delayed tasks (two lists are used - one for delays that have overflowed the current tick count. */
 PRIVILEGED_DATA static List_t * volatile pxDelayedTaskList;				/*< Points to the delayed task list currently being used. */
 PRIVILEGED_DATA static List_t * volatile pxOverflowDelayedTaskList;		/*< Points to the delayed task list currently being used to hold tasks that have overflowed the current tick count. */
-PRIVILEGED_DATA static List_t xPendingReadyList;						// 当调度器被挂起的时候 用这个 挂起就序链表/*< Tasks that have been readied while the scheduler was suspended.  They will be moved to the ready list when the scheduler is resumed. */
+PRIVILEGED_DATA static List_t xPendingReadyList;						// 当调度器被挂起的时候 用这个 挂起就序链表 /*< Tasks that have been readied while the scheduler was suspended.  They will be moved to the ready list when the scheduler is resumed. */
 
 #if( INCLUDE_vTaskDelete == 1 )
 
@@ -1247,10 +1247,10 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB )
 #if ( INCLUDE_vTaskDelay == 1 )
 
 	void vTaskDelay( const TickType_t xTicksToDelay )
-	// 非周期延时  比如在运行的时候 被一个中断进行抢占时间后，待恢复之后还会将这个任务的延时时间搞完，也就是说 这个延时和运行的时间和 中断的时间没有关系，也就是非周期的
-	// vTaskDelayUntil 周期的，中断的时间会影响到 
 	{
 	BaseType_t xAlreadyYielded = pdFALSE;
+		// 非周期延时	比如在运行的时候 被一个中断进行抢占时间后，待恢复之后还会将这个任务的延时时间搞完，也就是说 这个延时和运行的时间和 中断的时间没有关系，也就是非周期的
+		// vTaskDelayUntil 周期的，中断的时间会影响到 
 
 		/* A delay time of zero just forces a reschedule. */
 		if( xTicksToDelay > ( TickType_t ) 0U )
@@ -2865,6 +2865,7 @@ void vTaskPlaceOnEventList( List_t * const pxEventList, const TickType_t xTicksT
 
 	prvAddCurrentTaskToDelayedList( xTicksToWait, pdTRUE );
 }
+
 /*-----------------------------------------------------------*/
 // 当前的列表项 擦汇入到 事件列表 的尾部
 // 当前的任务添加到延时队列中
@@ -3670,12 +3671,11 @@ static void prvCheckTasksWaitingTermination( void )
 
 #endif /* INCLUDE_vTaskDelete */
 /*-----------------------------------------------------------*/
+// 若挂起的任务在等待信号啥的 ， 并需要将等待的时间重置，下一个阻塞任务的等待时间
 
 static void prvResetNextTaskUnblockTime( void )
 {
-// 若挂起的任务在等待信号啥的 ， 并需要将等待的时间重置，下一个阻塞任务的等待时间
-TCB_t *pxTCB;
-
+	TCB_t *pxTCB;
 	if( listLIST_IS_EMPTY( pxDelayedTaskList ) != pdFALSE )
 	{
 		/* The new current delayed list is empty.  Set xNextTaskUnblockTime to

@@ -328,7 +328,6 @@ List_t * const pxConstList = ( pxList );													\
 	{																						\
 		( pxConstList )->pxIndex = ( pxConstList )->pxIndex->pxNext;						\
 	}																						\
-	// 获取OWER
 	( pxTCB ) = ( pxConstList )->pxIndex->pvOwner;											\
 }
 
