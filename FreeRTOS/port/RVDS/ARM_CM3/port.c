@@ -247,7 +247,7 @@ static void prvTaskExitError( void )
 	for( ;; );
 }
 /*-----------------------------------------------------------*/
-
+// 将当前的任务控制块的 堆栈 放到寄存器中去，然后来执行 ，通过中断跳进来
 __asm void vPortSVCHandler( void )
 {
 	PRESERVE8
@@ -272,7 +272,7 @@ __asm void vPortSVCHandler( void )
 	mov r0, #0
 	msr	basepri, r0			// 将basepri 置0   打开所有中断
 	orr r14, #0xd			// svc 退出之前 将r14 或上1101 也就是 bit1 位置，
-							// 在硬件退出时使用进程堆栈指针PSP 进行线程模式
+							// 在硬件退出时使用进程堆栈指针PSP 进行线程模式 LR也就是 R14
 							
 	bx r14					// 异常返回失败，这个时候栈中剩下的内容会自动加载到CPU寄存器
 							// XPSR PC R14 r12 R3~R0 同时PSP值也更新，指向任务栈的栈顶
@@ -296,12 +296,16 @@ __asm void prvStartFirstTask( void )
 	ldr r0, =0xE000ED08	// //  0xE000ED08 地址处为VTOR（向量表偏移量）寄存器，存储向量表起始地址
 	ldr r0, [r0]		//  启动文件中, 最初地址放置的__initial_sp 
 	ldr r0, [r0]		//  根据向量表实际存储地址，取出向量表中的第一项，向量表第一项存储主堆栈指针 MSP 的初始值
-
+	//	0xE000ED08 地址处为VTOR（向量表偏移量）寄存器，存储向量表起始地址
+	//	将0xE000ED08立即数放入到R0中，R0 = 0xE000ED08
+	//	将 地址 0xE000ED08 上的数放入到R0 中 R0 = 0;
+	//	将 地址 0上的值放入到R0中，R0 = 0x200008DB
 	/* Set the msp back to the start of the stack. */
 	msr msp, r0			//  将 __initial_sp的初始值写入 MSP 中
+	// 将个z值写入到MSP中 就是栈顶指针
 	/* Globally enable interrupts. */
-	cpsie i				// 关中断
-	cpsie f				// 关异常
+	cpsie i				// 关中断 Primask
+	cpsie f				// 关异常	Faultmask
 	dsb
 	isb
 	/* Call SVC to start the first task. */
