@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD, USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase;..\..\User\FATFS;..\..\User\FATFS\option;..\..\User\fat;..\..\User\command;..\..\User\can</IncludePath>
+              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\led;..\..\FreeRTOS\include;..\..\FreeRTOS\port\RVDS\ARM_CM3;..\..\User\usart;..\..\User\Key;..\..\User\TimBase;..\..\User\FATFS;..\..\User\FATFS\option;..\..\User\fat;..\..\User\command;..\..\User\can;..\..\User\flash;..\..\User\sdio</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -697,6 +697,16 @@
               <FileName>bsp_can.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\User\can\bsp_can.h</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_spi_flash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\flash\bsp_spi_flash.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_spi_flash.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\User\flash\bsp_spi_flash.h</FilePath>
             </File>
           </Files>
         </Group>
