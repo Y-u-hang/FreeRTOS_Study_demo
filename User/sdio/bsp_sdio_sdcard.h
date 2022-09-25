@@ -315,8 +315,6 @@ typedef struct
 #define SDIO_SECURE_DIGITAL_IO_COMBO_CARD          ((uint32_t)0x00000006)
 #define SDIO_HIGH_CAPACITY_MMC_CARD                ((uint32_t)0x00000007)
 
-
-
 /* Exported functions ------------------------------------------------------- */
 void SD_DeInit(void);
 SD_Error SD_Init(void);

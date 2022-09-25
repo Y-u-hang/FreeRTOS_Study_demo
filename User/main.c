@@ -27,12 +27,13 @@
 #include "event_groups.h"
 #include "bsp_TiMbase.h"
 #include <string.h>
-#include "sdio/sdio_test.h"
-#include "sdio/bsp_sdio_sdcard.h"
+//#include "sdio_test.h"
+#include "bsp_sdio_sdcard.h"
 //#include "ff.h"
 #include "fatfs.h"
 #include "command.h"
 #include "bsp_can.h"
+#include "bsp_spi_flash.h"
 // #include "timers.h"
 /******************************* 宏定义 ************************************/
 /*
@@ -151,6 +152,29 @@ __IO uint32_t flag = 0; 	 //用于标志是否接收到数据，在中断函数�
 CanTxMsg TxMessage; 			 //发送缓冲区
 CanRxMsg RxMessage; 			 //接收缓冲区
 
+
+typedef enum { FAILED = 0, PASSED = !FAILED} TestStatus;
+
+/* 获取缓冲区的长度 */
+#define TxBufferSize1	(countof(TxBuffer1) - 1)
+#define RxBufferSize1	(countof(TxBuffer1) - 1)
+#define countof(a)		(sizeof(a) / sizeof(*(a)))
+#define  BufferSize (countof(Tx_Buffer)-1)
+
+#define  FLASH_WriteAddress 	0x00000
+#define  FLASH_ReadAddress		FLASH_WriteAddress
+#define  FLASH_SectorToErase	FLASH_WriteAddress
+
+		 
+
+/* 发送缓冲区初始化 */
+uint8_t Tx_Buffer[] = "感谢您选用秉火stm32开发板\r\n";
+uint8_t Rx_Buffer[BufferSize];
+
+__IO uint32_t DeviceID = 0;
+__IO uint32_t FlashID = 0;
+// __IO TestStatus TransferStatus1 = FAILED;
+
 /*
 *************************************************************************
 *                             函数声明
@@ -262,7 +286,8 @@ static void BSP_Init(void)
 
 	CAN_Config();
 
-
+	  /* 8M串行flash W25Q64初始化 */
+	SPI_FLASH_Init();
 	ChipUniqueID[0] = *(__IO u32 *)(0X1FFFF7F0); // 高字节
 	ChipUniqueID[1] = *(__IO u32 *)(0X1FFFF7EC); // 
 	ChipUniqueID[2] = *(__IO u32 *)(0X1FFFF7E8); // 低字节
@@ -277,6 +302,13 @@ static void BSP_Init(void)
 
 	MAIN_INFO("BSP初始化完成 \n");
 
+	DeviceID = SPI_FLASH_ReadDeviceID();	
+	/* 获取 SPI Flash ID */
+	FlashID = SPI_FLASH_ReadID();	
+	MAIN_INFO("FlashID is 0x%X,\
+	Manufacturer Device ID is 0x%X\r\n", FlashID, DeviceID);
+
+
 }
 
 /***********************************************************************
@@ -290,22 +322,6 @@ static void AppTaskCreate(void)
   BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
 
   taskENTER_CRITICAL();           //进入临界区
-
-
-  /* 创建LED_Task任务 */
-//  静态创建任务
-//	LED_Task_Handle = xTaskCreateStatic((TaskFunction_t	)LED_Task,		//任务函数
-//															(const char* 	)"LED_Task",		//任务名称
-//															(uint32_t 		)128,					//任务堆栈大小
-//															(void* 		  	)NULL,				//传递给任务函数的参数
-//															(UBaseType_t 	)4, 				//任务优先级
-//															(StackType_t*   )LED_Task_Stack,	//任务堆栈
-//															(StaticTask_t*  )&LED_Task_TCB);	//任务控制块   
-//	
-//	if(NULL != LED_Task_Handle)/* 创建成功 */
-//		printf("LED_Task任务创建成功!\n");
-//	else
-//		printf("LED_Task任务创建失败!\n");
 
 
   /* 创建 BinarySem */

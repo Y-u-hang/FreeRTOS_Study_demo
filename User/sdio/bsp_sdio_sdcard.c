@@ -865,8 +865,8 @@ SD_Error SD_InitializeCards(void)
     SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Long;
     SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
     SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-	SDIO_DEBUG("SD_CMD_ALL_SEND_CID \n");
     SDIO_SendCommand(&SDIO_CmdInitStructure);
+	SDIO_DEBUG("SD_CMD_ALL_SEND_CID \n");
 
     errorstatus = CmdResp2Error();
 
@@ -880,6 +880,7 @@ SD_Error SD_InitializeCards(void)
     CID_Tab[1] = SDIO_GetResponse(SDIO_RESP2);
     CID_Tab[2] = SDIO_GetResponse(SDIO_RESP3);
     CID_Tab[3] = SDIO_GetResponse(SDIO_RESP4);
+	SDIO_INFO("the cd card CID is %d-%d-%d-%d \n", CID_Tab[0], CID_Tab[1], CID_Tab[2], CID_Tab[3]);
   }
 /********************************************************************************************************/
   if (   (SDIO_STD_CAPACITY_SD_CARD_V1_1 == CardType) 
@@ -921,8 +922,9 @@ SD_Error SD_InitializeCards(void)
     SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Long;
     SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
     SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-	SDIO_DEBUG("通过cmd 线发送SD_CMD_SEND_CSD 地址去寻址\n");
+
     SDIO_SendCommand(&SDIO_CmdInitStructure);
+	SDIO_DEBUG("请求SD通过cmd 线发送CSD 内容\n");
 
     errorstatus = CmdResp2Error();
 
@@ -2185,7 +2187,7 @@ SD_Error SD_ProcessIRQSrc(void)
   SDIO_ClearITPendingBit(SDIO_IT_DATAEND); //清中断
   SDIO_ITConfig(SDIO_IT_RXOVERR|SDIO_IT_DTIMEOUT|SDIO_IT_DCRCFAIL|SDIO_IT_DATAEND, DISABLE);
 
-  //SDIO_ITConfig(SDIO_IT_DATAEND, DISABLE); //关闭sdio中断使能
+  // SDIO_ITConfig(SDIO_IT_DATAEND, DISABLE); //关闭sdio中断使能
   TransferEnd = 1;
   SDIO_DEBUG("TransferError is %d\n", TransferError);
   return(TransferError);
@@ -2474,8 +2476,8 @@ static SD_Error SDEnWideBus(FunctionalState NewState)
       SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
       SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
       SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-	  SDIO_DEBUG("开启4BIT 模式\n");
       SDIO_SendCommand(&SDIO_CmdInitStructure);
+	  SDIO_INFO("开启4BIT 模式\n");
 
       errorstatus = CmdResp1Error(SD_CMD_APP_SD_SET_BUSWIDTH);
 

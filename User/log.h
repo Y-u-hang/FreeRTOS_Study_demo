@@ -8,7 +8,7 @@ extern "C" {
 
 #include <stdio.h>
 
-#define LOG_RANK 1	//LOG 等级设定
+#define LOG_RANK 0	//LOG 等级设定
 #define DEBUG 0
 #define INFO 1
 #define WARNING 2
