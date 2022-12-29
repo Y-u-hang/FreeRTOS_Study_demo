@@ -30,11 +30,23 @@
 ;   <o> Stack Size (in Bytes) <0x0-0xFFFFFFFF:8>
 ; </h>
 
+; EQU   	给数字常量取一个符号名，相当于C语言中的define
+; AREA  	汇编一个新的代码段或者数据段
+; SPACE 	分配内存空间
+; PRESERVE8 当前文件堆栈需按照8字节对齐
+; EXPORT 	声明一个标号具有全局属性，可被外部的文件使用
+; DCD 		以字为单位分配内存，要求4字节对齐，并要求初始化这些内存
+; PROC 		定义子程序，与ENDP成对使用，表示子程序结束
+; WEAK		弱定义，这个不是ARM的指令，是编译器的，这里放在一起只是为了方便。
+; IMPORT	声明标号来自外部文件，跟C语言中的EXTERN关键字类似
+; B			跳转到一个标号
+; ALIGN		编译器对指令或者数据的存放地址进行对齐，一般需要跟一个立即数，缺省表示4字节对齐
+
 Stack_Size      EQU     0x00000400
 
                 AREA    STACK, NOINIT, READWRITE, ALIGN=3
-Stack_Mem       SPACE   Stack_Size
-__initial_sp
+Stack_Mem       SPACE   Stack_Size	;分配一个内存空间为0x00000400大小的空间
+__initial_sp						;标号__initial_sp紧挨着SPACE语句放置，表示栈的结束地址，即栈顶地址，栈是由高向低生长的。
 
 
 ; <h> Heap Configuration
@@ -50,6 +62,8 @@ __heap_limit
 
                 PRESERVE8
                 THUMB
+				;表示后面指令兼容THUMB指令。THUMB是ARM以前的指令集，16bit，现在Cortex-M系列的都使用THUMB-2指令集，
+				;THUMB-2是32位的，兼容16位和32位的指令，是THUMB的超集。
 
 
 ; Vector Table Mapped to Address 0 at Reset
@@ -58,27 +72,27 @@ __heap_limit
                 EXPORT  __Vectors_End
                 EXPORT  __Vectors_Size
 
-__Vectors       DCD     __initial_sp               ; Top of Stack
+__Vectors       DCD     __initial_sp               ; Top of Stack  也是MSP地址
                 DCD     Reset_Handler              ; Reset Handler
-                DCD     NMI_Handler                ; NMI Handler
+                DCD     NMI_Handler                ; NMI Handler 不可屏蔽中断，RCC时钟安全系统CSS 连接到NMI向量
                 DCD     HardFault_Handler          ; Hard Fault Handler
-                DCD     MemManage_Handler          ; MPU Fault Handler
-                DCD     BusFault_Handler           ; Bus Fault Handler
-                DCD     UsageFault_Handler         ; Usage Fault Handler
+                DCD     MemManage_Handler          ; MPU Fault Handler 存储器管理
+                DCD     BusFault_Handler           ; Bus Fault Handler	预取指失败，存储器访问失败
+                DCD     UsageFault_Handler         ; Usage Fault Handler	未定义的指令或非法状态
                 DCD     0                          ; Reserved
                 DCD     0                          ; Reserved
                 DCD     0                          ; Reserved
                 DCD     0                          ; Reserved
                 DCD     SVC_Handler                ; SVCall Handler
-                DCD     DebugMon_Handler           ; Debug Monitor Handler
+                DCD     DebugMon_Handler           ; Debug Monitor Handler	调试监控器
                 DCD     0                          ; Reserved
-                DCD     PendSV_Handler             ; PendSV Handler
-                DCD     SysTick_Handler            ; SysTick Handler
+                DCD     PendSV_Handler             ; PendSV Handler			可挂起系统服务
+                DCD     SysTick_Handler            ; SysTick Handler		系统滴答计时器
 
                 ; External Interrupts
                 DCD     WWDG_IRQHandler            ; Window Watchdog
-                DCD     PVD_IRQHandler             ; PVD through EXTI Line detect
-                DCD     TAMPER_IRQHandler          ; Tamper
+                DCD     PVD_IRQHandler             ; PVD through EXTI Line detect	连接EXTI 线的可编程电压检测中断
+                DCD     TAMPER_IRQHandler          ; Tamper							连接EXTI 线的入侵和时间戳中断
                 DCD     RTC_IRQHandler             ; RTC
                 DCD     FLASH_IRQHandler           ; Flash
                 DCD     RCC_IRQHandler             ; RCC
@@ -146,7 +160,7 @@ __Vectors       DCD     __initial_sp               ; Top of Stack
                 DCD     OTG_FS_IRQHandler          ; USB OTG FS
 __Vectors_End
 
-__Vectors_Size  EQU  __Vectors_End - __Vectors
+__Vectors_Size  EQU  __Vectors_End - __Vectors	;可以理解中断向量表的大小计算
 
                 AREA    |.text|, CODE, READONLY
 
