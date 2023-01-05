@@ -111,7 +111,7 @@ void vListInitialiseItem( ListItem_t * const pxItem )
 
 	/* Write known values into the list item if
 	configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES is set to 1. */
-	listSET_FIRST_LIST_ITEM_INTEGRITY_CHECK_VALUE( pxItem );
+	listSET_FIRST_LIST_ITEM_INTEGRITY_CHECK_VALUE( pxItem );	// 为了堆栈溢出而做的 赋值检测保护？
 	listSET_SECOND_LIST_ITEM_INTEGRITY_CHECK_VALUE( pxItem );
 }
 /*-----------------------------------------------------------*/

@@ -74,10 +74,10 @@ __heap_limit
 
 __Vectors       DCD     __initial_sp               ; Top of Stack  也是MSP地址
                 DCD     Reset_Handler              ; Reset Handler
-                DCD     NMI_Handler                ; NMI Handler 不可屏蔽中断，RCC时钟安全系统CSS 连接到NMI向量
+                DCD     NMI_Handler                ; NMI Handler 			不可屏蔽中断，RCC时钟安全系统CSS 连接到NMI向量
                 DCD     HardFault_Handler          ; Hard Fault Handler
-                DCD     MemManage_Handler          ; MPU Fault Handler 存储器管理
-                DCD     BusFault_Handler           ; Bus Fault Handler	预取指失败，存储器访问失败
+                DCD     MemManage_Handler          ; MPU Fault Handler 		存储器管理
+                DCD     BusFault_Handler           ; Bus Fault Handler		预取指失败，存储器访问失败
                 DCD     UsageFault_Handler         ; Usage Fault Handler	未定义的指令或非法状态
                 DCD     0                          ; Reserved
                 DCD     0                          ; Reserved
